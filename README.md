@@ -5,5 +5,6 @@
 - Use `npm` command:
 
 ```
+npm install
 npm run dev
 ```
