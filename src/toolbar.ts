@@ -129,7 +129,7 @@ export class Toolbar {
 		}
 	}
 
-	private resizeToolbar() {
+	public resizeToolbar() {
 		this.updateToolbarLayout();
 		this.canvas.width = this.isMobile ? window.innerWidth : 50;
 		this.canvas.height = this.isMobile ? 50 : window.innerHeight;
@@ -159,8 +159,8 @@ export class Toolbar {
 	}
 
 	private togglePopup(type: string) {
-		if (this.currentPopup && this.currentPopup.id === type) { 
-			this.closePopup(type); 
+		if (this.currentPopup && this.currentPopup.id === `${type}Popup`) {
+			this.closePopup(type);
 		} else {
 			this.closeCurrentPopup();
 			this.showPopup(type);
@@ -227,7 +227,7 @@ export class Toolbar {
 		this.currentCloseIcon = closeIcon;
 	}
 
-	private closePopup(type: string) {
+	public closePopup(type: string) {
 		const popup = document.getElementById(`${type}Popup`);
 		if (popup && popup.parentNode) {
 			popup.parentNode.removeChild(popup);
