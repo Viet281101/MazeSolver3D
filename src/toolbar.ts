@@ -207,6 +207,7 @@ export class Toolbar {
 		titleElement.style.zIndex = '1001';
 		titleElement.style.fontSize = '22px';
 		titleElement.style.color = '#00ffaa';
+		titleElement.style.backgroundColor = 'rgba(0, 0, 0, 0)';
 		titleElement.textContent = title;
 		popupContainer.appendChild(titleElement);
 
@@ -225,6 +226,7 @@ export class Toolbar {
 		closeIcon.style.cursor = 'pointer';
 		closeIcon.style.zIndex = '1001';
 		closeIcon.style.transform = 'translateX(-50%)';
+		closeIcon.style.backgroundColor = 'rgba(0, 0, 0, 0)';
 		closeIcon.addEventListener('click', () => this.closeCurrentPopup());
 		document.body.appendChild(closeIcon);
 		this.currentCloseIcon = closeIcon;
