@@ -1,6 +1,7 @@
 import { showSolvePopup } from './popup/solve';
 import { showSettingsPopup } from './popup/setting';
 import { showTutorialPopup } from './popup/tutorial';
+import { showMazePopup } from './popup/maze';
 
 export class Toolbar {
 	private canvas!: HTMLCanvasElement;
@@ -39,6 +40,7 @@ export class Toolbar {
 
 	private createButtons() {
 		return [
+			{ name: 'Custom Maze', icon: './src/icon/maze.png', action: () => this.togglePopup('maze'), x: 0, y: 0, width: 0, height: 0 },
 			{ name: 'Solving Maze', icon: './src/icon/solving.png', action: () => this.togglePopup('solve'), x: 0, y: 0, width: 0, height: 0 },
 			{ name: 'Tutorial', icon: './src/icon/question.png', action: () => this.togglePopup('tutorial'), x: 0, y: 0, width: 0, height: 0 },
 			{ name: 'Settings', icon: './src/icon/setting.png', action: () => this.togglePopup('settings'), x: 0, y: 0, width: 0, height: 0 },
@@ -119,7 +121,7 @@ export class Toolbar {
 
 	private handleDocumentClick(e: MouseEvent | TouchEvent) {
 		if (this.popupOpen) {
-			const popups = ['solvePopup', 'tutorialPopup', 'settingsPopup'];
+			const popups = ['solvePopup', 'tutorialPopup', 'settingsPopup', 'mazePopup'];
 			popups.forEach(popupId => {
 				const popup = document.getElementById(popupId);
 				if (popup && !popup.contains(e.target as Node) && !this.canvas.contains(e.target as Node)) {
@@ -173,6 +175,7 @@ export class Toolbar {
 			case 'solve': showSolvePopup(this); break;
 			case 'tutorial': showTutorialPopup(this); break;
 			case 'settings': showSettingsPopup(this); break;
+			case 'maze': showMazePopup(this); break;
 		}
 	}
 
