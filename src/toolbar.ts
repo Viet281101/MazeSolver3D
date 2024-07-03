@@ -40,10 +40,10 @@ export class Toolbar {
 
 	private createButtons() {
 		return [
-			{ name: 'Custom Maze', icon: './src/icon/maze.png', action: () => this.togglePopup('maze'), x: 0, y: 0, width: 0, height: 0 },
-			{ name: 'Solving Maze', icon: './src/icon/solving.png', action: () => this.togglePopup('solve'), x: 0, y: 0, width: 0, height: 0 },
-			{ name: 'Tutorial', icon: './src/icon/question.png', action: () => this.togglePopup('tutorial'), x: 0, y: 0, width: 0, height: 0 },
-			{ name: 'Settings', icon: './src/icon/setting.png', action: () => this.togglePopup('settings'), x: 0, y: 0, width: 0, height: 0 },
+			{ name: 'Custom Maze', icon: '/MazeSolver3D/src/icon/maze.png', action: () => this.togglePopup('maze'), x: 0, y: 0, width: 0, height: 0 },
+			{ name: 'Solving Maze', icon: '/MazeSolver3D/src/icon/solving.png', action: () => this.togglePopup('solve'), x: 0, y: 0, width: 0, height: 0 },
+			{ name: 'Tutorial', icon: '/MazeSolver3D/src/icon/question.png', action: () => this.togglePopup('tutorial'), x: 0, y: 0, width: 0, height: 0 },
+			{ name: 'Settings', icon: '/MazeSolver3D/src/icon/setting.png', action: () => this.togglePopup('settings'), x: 0, y: 0, width: 0, height: 0 },
 		];
 	}
 
@@ -218,7 +218,7 @@ export class Toolbar {
 	private addCloseIcon() {
 		if (this.currentCloseIcon) { document.body.removeChild(this.currentCloseIcon); }
 		const closeIcon = new Image();
-		closeIcon.src = './src/icon/close.png';
+		closeIcon.src = '/MazeSolver3D/src/icon/close.png';
 		closeIcon.style.position = 'fixed';
 		closeIcon.style.top = this.isMobile ? '56px' : '10px';
 		closeIcon.style.left = this.isMobile ? 'calc(50% + 162px)' : '400px';
