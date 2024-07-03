@@ -229,9 +229,11 @@ export class Toolbar {
 
 	private closePopup(type: string) {
 		const popup = document.getElementById(`${type}Popup`);
-		if (popup) { document.body.removeChild(popup); }
-		if (this.currentCloseIcon) {
-			document.body.removeChild(this.currentCloseIcon);
+		if (popup && popup.parentNode) {
+			popup.parentNode.removeChild(popup);
+		}
+		if (this.currentCloseIcon && this.currentCloseIcon.parentNode) {
+			this.currentCloseIcon.parentNode.removeChild(this.currentCloseIcon);
 			this.currentCloseIcon = null;
 		}
 		const inputs = document.querySelectorAll('.popup-input');
@@ -241,6 +243,14 @@ export class Toolbar {
 	}
 
 	private closeCurrentPopup() { 
-		if (this.currentPopup) { this.closePopup(this.currentPopup.id); } 
+		if (this.currentPopup && this.currentPopup.parentNode) { 
+			this.currentPopup.parentNode.removeChild(this.currentPopup);
+			this.currentPopup = null;
+		}
+		if (this.currentCloseIcon && this.currentCloseIcon.parentNode) {
+			this.currentCloseIcon.parentNode.removeChild(this.currentCloseIcon);
+			this.currentCloseIcon = null;
+		}
+		this.popupOpen = false;
 	}
 }
