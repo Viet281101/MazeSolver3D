@@ -61,13 +61,13 @@ export class Toolbar {
 			const img = new Image();
 			img.src = button.icon;
 			img.onload = () => {
-				this.ctx.drawImage(img, startX, 10, 30, 30);
+				this.ctx.drawImage(img, startX - 2, 8, 36, 36);
 				this.ctx.strokeStyle = '#fff';
-				this.ctx.strokeRect(startX - 5, 5, 40, 40);
+				this.ctx.strokeRect(startX - 5, 5, 42, 42);
 				button.x = startX - 5;
 				button.y = 5;
-				button.width = 40;
-				button.height = 40;
+				button.width = 42;
+				button.height = 42;
 				startX += 60;
 			};
 		});
@@ -81,13 +81,13 @@ export class Toolbar {
 			const img = new Image();
 			img.src = button.icon;
 			img.onload = () => {
-				this.ctx.drawImage(img, 10, startY, 30, 30);
+				this.ctx.drawImage(img, 8, startY - 2, 36, 36);
 				this.ctx.strokeStyle = '#fff';
-				this.ctx.strokeRect(5, startY - 5, 40, 40);
+				this.ctx.strokeRect(5, startY - 5, 42, 42);
 				button.x = 5;
 				button.y = startY - 5;
-				button.width = 40;
-				button.height = 40;
+				button.width = 42;
+				button.height = 42;
 				startY += 60;
 			};
 		});
