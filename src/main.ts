@@ -10,7 +10,16 @@ class MainApp {
 	constructor() {
 		this.canvas = document.getElementById('mazeCanvas') as HTMLCanvasElement;
 		this.toolbar = new Toolbar();
-		this.maze = new Maze(this.canvas);
+		const initialMaze = [
+			[
+				[1, 0, 1, 1, 1, 1],
+				[1, 0, 0, 1, 0, 1],
+				[1, 1, 0, 0, 0, 1],
+				[1, 0, 0, 0, 0, 1],
+				[1, 1, 1, 1, 1, 1],
+			],
+		];
+		this.maze = new Maze(this.canvas, initialMaze);
 
 		window.addEventListener('resize', () => this.onWindowResize());
 	}
@@ -21,8 +30,31 @@ class MainApp {
 		this.toolbar.resizeToolbar();
 		this.maze.resize();
 	}
+
+	public updateMaze(newMaze: number[][][]) {
+		this.maze.deleteMaze();
+		this.maze = new Maze(this.canvas, newMaze);
+	}
 }
 
 window.onload = () => {
-	new MainApp();
+	const app = new MainApp();
+	// Example usage of updateMaze
+	const newMaze = [
+		[
+			[1, 0, 1, 1, 1, 1],
+			[1, 0, 0, 1, 0, 1],
+			[1, 1, 0, 0, 0, 1],
+			[1, 0, 0, 0, 0, 1],
+			[1, 1, 1, 1, 1, 1],
+		],
+		[
+			[1, 0, 1, 1, 1, 1],
+			[1, 0, 0, 1, 0, 1],
+			[1, 0, 0, 1, 1, 1],
+			[1, 0, 0, 0, 0, 1],
+			[1, 1, 1, 1, 1, 1],
+		],
+	];
+	// app.updateMaze(newMaze);
 };
