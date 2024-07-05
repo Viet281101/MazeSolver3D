@@ -49,27 +49,31 @@ export class Maze {
 
 		this.maze.forEach((layer, layerIndex) => {
 			const mazeLayer = new THREE.Object3D();
+			const layerHeight = layerIndex * this.wallHeight;
+
 			layer.forEach((row, rowIndex) => {
 				row.forEach((cell, colIndex) => {
 					if (cell === 1) {
 						if (colIndex < row.length - 1 && row[colIndex + 1] === 1) {
-							mazeLayer.add(this.createWall(colIndex * this.cellSize + this.cellSize / 2, this.wallHeight / 2 + layerIndex * (this.wallHeight + 0.5), -rowIndex * this.cellSize, this.cellSize, this.wallHeight, this.wallThickness));
+							mazeLayer.add(this.createWall(colIndex * this.cellSize + this.cellSize / 2, layerHeight + this.wallHeight / 2, -rowIndex * this.cellSize, this.cellSize, this.wallHeight, this.wallThickness));
 						}
 						if (rowIndex < layer.length - 1 && layer[rowIndex + 1][colIndex] === 1) {
-							mazeLayer.add(this.createWall(colIndex * this.cellSize, this.wallHeight / 2 + layerIndex * (this.wallHeight + 0.5), -(rowIndex * this.cellSize + this.cellSize / 2), this.wallThickness, this.wallHeight, this.cellSize));
+							mazeLayer.add(this.createWall(colIndex * this.cellSize, layerHeight + this.wallHeight / 2, -(rowIndex * this.cellSize + this.cellSize / 2), this.wallThickness, this.wallHeight, this.cellSize));
 						}
 					}
 				});
 			});
 
-			const floorGeometry = new THREE.PlaneGeometry(layer[0].length * this.cellSize, layer.length * this.cellSize);
-			const floorMaterial = new THREE.MeshBasicMaterial({ color: 0xC0C0C0, side: THREE.DoubleSide });
-			const floor = new THREE.Mesh(floorGeometry, floorMaterial);
-			floor.rotation.x = -Math.PI / 2;
-			floor.position.y = -this.wallThickness / 2 + layerIndex * (this.wallHeight + 0.5);
-			floor.position.z = -layer.length * this.cellSize / 2 + this.cellSize / 2;
-			floor.position.x = layer[0].length * this.cellSize / 2 - this.cellSize / 2;
-			mazeLayer.add(floor);
+			if (layerIndex === 0) {
+				const floorGeometry = new THREE.PlaneGeometry(layer[0].length * this.cellSize, layer.length * this.cellSize);
+				const floorMaterial = new THREE.MeshBasicMaterial({ color: 0xC0C0C0, side: THREE.DoubleSide });
+				const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+				floor.rotation.x = -Math.PI / 2;
+				floor.position.y = -this.wallThickness / 2;
+				floor.position.z = -layer.length * this.cellSize / 2 + this.cellSize / 2;
+				floor.position.x = layer[0].length * this.cellSize / 2 - this.cellSize / 2;
+				mazeLayer.add(floor);
+			}
 
 			this.mazeLayers.push(mazeLayer);
 			this.scene.add(mazeLayer);
