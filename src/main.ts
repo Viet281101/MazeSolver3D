@@ -1,11 +1,13 @@
 import './style.css';
-import { Maze } from './maze';
+import { LayerMaze } from './maze';
 import { Toolbar } from './toolbar';
+import { GUIController } from './gui';
 
 class MainApp {
 	private canvas: HTMLCanvasElement;
 	private toolbar: Toolbar;
-	private maze: Maze;
+	private maze: LayerMaze;
+	private guiController: GUIController;
 
 	constructor() {
 		this.canvas = document.getElementById('mazeCanvas') as HTMLCanvasElement;
@@ -19,7 +21,8 @@ class MainApp {
 				[1, 1, 1, 1, 1, 1],
 			],
 		];
-		this.maze = new Maze(this.canvas, initialMaze);
+		this.maze = new LayerMaze(this.canvas, initialMaze);
+		this.guiController = new GUIController(this);
 
 		window.addEventListener('resize', () => this.onWindowResize());
 	}
@@ -29,11 +32,16 @@ class MainApp {
 		this.canvas.height = window.innerHeight;
 		this.toolbar.resizeToolbar();
 		this.maze.resize();
+		this.guiController.checkWindowSize();
 	}
 
 	public updateMaze(newMaze: number[][][]) {
 		this.maze.deleteMaze();
-		this.maze = new Maze(this.canvas, newMaze);
+		this.maze = new LayerMaze(this.canvas, newMaze);
+	}
+
+	public getRenderer() {
+		return this.maze.getRenderer();
 	}
 }
 

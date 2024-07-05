@@ -17,5 +17,5 @@
 		"incremental": true,
 		"types": ["vite/client"]
 	},
-	"include": ["src"]
+	"include": ["src", "src/types"]
 }

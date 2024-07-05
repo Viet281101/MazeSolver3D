@@ -1,5 +1,9 @@
 # 3D Maze Solving
 
+### Libraries
+
+Threejs, dat.gui
+
 ### Compile & Debug
 
 - Use `npm` command:

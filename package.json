@@ -10,6 +10,7 @@
 		"deploy": "gh-pages -d dist"
 	},
 	"devDependencies": {
+		"@types/dat.gui": "^0.7.13",
 		"gh-pages": "^6.1.1",
 		"typescript": "^5.2.2",
 		"vite": "^5.3.1",
@@ -17,6 +18,7 @@
 	},
 	"dependencies": {
 		"@types/three": "^0.166.0",
+		"dat.gui": "^0.7.9",
 		"three": "^0.166.0"
 	}
 }

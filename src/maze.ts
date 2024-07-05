@@ -2,16 +2,16 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 
 export class Maze {
-	private canvas: HTMLCanvasElement;
-	private scene: THREE.Scene;
-	private camera: THREE.PerspectiveCamera;
-	private renderer: THREE.WebGLRenderer;
-	private controls: OrbitControls;
-	private maze: number[][][];
-	private wallHeight: number;
-	private wallThickness: number;
-	private cellSize: number;
-	private mazeLayers: THREE.Object3D[];
+	protected canvas: HTMLCanvasElement;
+	protected scene: THREE.Scene;
+	protected camera: THREE.PerspectiveCamera;
+	protected renderer: THREE.WebGLRenderer;
+	protected controls: OrbitControls;
+	protected maze: number[][][];
+	protected wallHeight: number;
+	protected wallThickness: number;
+	protected cellSize: number;
+	protected mazeLayers: THREE.Object3D[];
 
 	constructor(canvas: HTMLCanvasElement, maze: number[][][], wallHeight: number = 1, wallThickness: number = 0.1, cellSize: number = 1) {
 		this.canvas = canvas;
@@ -30,7 +30,7 @@ export class Maze {
 		this.animate();
 	}
 
-	private createWall(x: number, y: number, z: number, width: number, height: number, depth: number) {
+	protected createWall(x: number, y: number, z: number, width: number, height: number, depth: number) {
 		const geometry = new THREE.BoxGeometry(width, height, depth);
 		const material = new THREE.MeshBasicMaterial({ color: 0x808080 });
 		const wall = new THREE.Mesh(geometry, material);
@@ -38,13 +38,46 @@ export class Maze {
 		return wall;
 	}
 
-	private init() {
+	protected init() {
 		this.renderer.setSize(window.innerWidth, window.innerHeight);
 		document.body.appendChild(this.renderer.domElement);
 		this.createMaze();
 	}
 
-	private createMaze() {
+	protected createMaze() {
+		// To be implemented by subclasses
+	}
+
+	private animate() {
+		requestAnimationFrame(() => this.animate());
+		this.controls.update();
+		this.renderer.render(this.scene, this.camera);
+	}
+
+	public resize() {
+		this.camera.aspect = window.innerWidth / window.innerHeight;
+		this.camera.updateProjectionMatrix();
+		this.renderer.setSize(window.innerWidth, window.innerHeight);
+	}
+
+	public deleteMaze() {
+		this.mazeLayers.forEach(layer => {
+			this.scene.remove(layer);
+		});
+		this.mazeLayers = [];
+	}
+
+	public getRenderer() {
+		return this.renderer;
+	}
+}
+
+export class LayerMaze extends Maze {
+	constructor(canvas: HTMLCanvasElement, maze: number[][][], wallHeight: number = 1, wallThickness: number = 0.1, cellSize: number = 1) {
+		super(canvas, maze, wallHeight, wallThickness, cellSize);
+	}
+
+	protected createMaze() {
 		this.deleteMaze();
 
 		this.maze.forEach((layer, layerIndex) => {
@@ -84,24 +117,5 @@ export class Maze {
 		this.camera.position.set(mazeCenterX, 5, this.maze.length * this.cellSize);
 		this.controls.target.set(mazeCenterX, 0, mazeCenterZ);
 		this.controls.update();
-	}
-
-	private animate() {
-		requestAnimationFrame(() => this.animate());
-		this.controls.update();
-		this.renderer.render(this.scene, this.camera);
-	}
-
-	public resize() {
-		this.camera.aspect = window.innerWidth / window.innerHeight;
-		this.camera.updateProjectionMatrix();
-		this.renderer.setSize(window.innerWidth, window.innerHeight);
-	}
-
-	public deleteMaze() {
-		this.mazeLayers.forEach(layer => {
-			this.scene.remove(layer);
-		});
-		this.mazeLayers = [];
 	}
 }
