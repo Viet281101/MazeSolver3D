@@ -1,18 +1,4 @@
-* {
-	box-sizing: border-box;
-	background-color: black;
-	overflow: hidden;
-}
-
-body {
-	margin: 0;
-	display: flex;
-	justify-content: center;
-	align-items: center;
-	height: 100vh;
-}
-
-canvas {
-	width: 100%;
-	height: 100%;
-}
+@charset "UTF-8";
+@font-face {font-family:'Pixellari';src: url("/Pixellari.ttf") format("truetype");}
+* { box-sizing: border-box; background-color: black; font-family: 'Pixellari', sans-serif;}
+body { margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; }
