@@ -16,6 +16,7 @@ export class Maze {
 	protected floorColor: THREE.Color;
 	protected wallOpacity: number;
 	protected floorOpacity: number;
+	protected showEdges: boolean;
 
 	constructor(canvas: HTMLCanvasElement, maze: number[][][], wallHeight: number = 1, wallThickness: number = 0.1, cellSize: number = 1) {
 		this.canvas = canvas;
@@ -33,6 +34,7 @@ export class Maze {
 		this.floorColor = new THREE.Color(0xC0C0C0);
 		this.wallOpacity = 1.0;
 		this.floorOpacity = 1.0;
+		this.showEdges = true;
 
 		this.init();
 		this.animate();
@@ -44,13 +46,15 @@ export class Maze {
 		const wall = new THREE.Mesh(geometry, material);
 		wall.position.set(x, y, z);
 
-		const edges = new THREE.EdgesGeometry(geometry);
-		const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x000000 }));
-		line.position.set(x, y, z);
-
 		const group = new THREE.Group();
 		group.add(wall);
-		group.add(line);
+
+		if (this.showEdges) {
+			const edges = new THREE.EdgesGeometry(geometry);
+			const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x000000 }));
+			line.position.set(x, y, z);
+			group.add(line);
+		}
 
 		return group;
 	}
@@ -62,14 +66,16 @@ export class Maze {
 		floor.rotation.x = -Math.PI / 2;
 		floor.position.set(x, y, z);
 
-		const edges = new THREE.EdgesGeometry(floorGeometry);
-		const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x000000 }));
-		line.rotation.x = -Math.PI / 2;
-		line.position.set(x, y, z);
-
 		const group = new THREE.Group();
 		group.add(floor);
-		group.add(line);
+
+		if (this.showEdges) {
+			const edges = new THREE.EdgesGeometry(floorGeometry);
+			const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x000000 }));
+			line.rotation.x = -Math.PI / 2;
+			line.position.set(x, y, z);
+			group.add(line);
+		}
 
 		return group;
 	}
@@ -127,6 +133,11 @@ export class Maze {
 		this.updateColors();
 	}
 
+	public toggleEdges(showEdges: boolean) {
+		this.showEdges = showEdges;
+		this.updateColors();
+	}
+
 	protected updateColors() {
 		this.mazeLayers.forEach(layer => {
 			layer.children.forEach((child: THREE.Object3D) => {
@@ -142,6 +153,18 @@ export class Maze {
 							}
 						}
 					});
+					child.children = child.children.filter((mesh) => !(mesh instanceof THREE.LineSegments));
+					if (this.showEdges) {
+						child.children.forEach((mesh) => {
+							if (mesh instanceof THREE.Mesh) {
+								const edges = new THREE.EdgesGeometry(mesh.geometry);
+								const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x000000 }));
+								line.position.set(mesh.position.x, mesh.position.y, mesh.position.z);
+								line.rotation.copy(mesh.rotation); // Ensure the rotation is correct
+								child.add(line);
+							}
+						});
+					}
 				}
 			});
 		});
