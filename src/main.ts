@@ -43,6 +43,14 @@ class MainApp {
   public getRenderer() {
     return this.maze.getRenderer();
   }
+
+  public updateWallColor(color: string) {
+    this.maze.updateWallColor(color);
+  }
+
+  public updateFloorColor(color: string) {
+    this.maze.updateFloorColor(color);
+  }
 }
 
 window.onload = () => {

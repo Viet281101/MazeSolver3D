@@ -9,6 +9,8 @@ export class GUIController {
     this.mainApp = mainApp;
     this.settings = {
       backgroundColor: '#000',
+      floorColor: '#C0C0C0',
+      wallColor: '#808080',
     };
     this.gui = new dat.GUI();
     this.init();
@@ -29,6 +31,12 @@ export class GUIController {
       if (renderer) {
         renderer.setClearColor(value);
       }
+    });
+    this.gui.addColor(this.settings, 'floorColor').onChange((value: string) => {
+      this.mainApp.updateFloorColor(value);
+    });
+    this.gui.addColor(this.settings, 'wallColor').onChange((value: string) => {
+      this.mainApp.updateWallColor(value);
     });
   }
 

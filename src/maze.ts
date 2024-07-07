@@ -12,6 +12,8 @@ export class Maze {
   protected wallThickness: number;
   protected cellSize: number;
   protected mazeLayers: THREE.Object3D[];
+  protected wallColor: THREE.Color;
+  protected floorColor: THREE.Color;
 
   constructor(
     canvas: HTMLCanvasElement,
@@ -36,6 +38,8 @@ export class Maze {
     this.wallThickness = wallThickness;
     this.cellSize = cellSize;
     this.mazeLayers = [];
+    this.wallColor = new THREE.Color(0x808080);
+    this.floorColor = new THREE.Color(0xc0c0c0);
 
     this.init();
     this.animate();
@@ -50,7 +54,7 @@ export class Maze {
     depth: number
   ) {
     const geometry = new THREE.BoxGeometry(width, height, depth);
-    const material = new THREE.MeshBasicMaterial({ color: 0x808080 });
+    const material = new THREE.MeshBasicMaterial({ color: this.wallColor });
     const wall = new THREE.Mesh(geometry, material);
     wall.position.set(x, y, z);
     return wall;
@@ -87,6 +91,30 @@ export class Maze {
 
   public getRenderer() {
     return this.renderer;
+  }
+
+  public updateWallColor(color: string) {
+    this.wallColor.set(color);
+    this.updateColors();
+  }
+
+  public updateFloorColor(color: string) {
+    this.floorColor.set(color);
+    this.updateColors();
+  }
+
+  protected updateColors() {
+    this.mazeLayers.forEach(layer => {
+      layer.children.forEach((child: THREE.Object3D) => {
+        if (child instanceof THREE.Mesh) {
+          if (child.geometry instanceof THREE.PlaneGeometry) {
+            (child.material as THREE.MeshBasicMaterial).color = this.floorColor;
+          } else if (child.geometry instanceof THREE.BoxGeometry) {
+            (child.material as THREE.MeshBasicMaterial).color = this.wallColor;
+          }
+        }
+      });
+    });
   }
 }
 
@@ -145,7 +173,7 @@ export class LayerMaze extends Maze {
           layer.length * this.cellSize
         );
         const floorMaterial = new THREE.MeshBasicMaterial({
-          color: 0xc0c0c0,
+          color: this.floorColor,
           side: THREE.DoubleSide,
         });
         const floor = new THREE.Mesh(floorGeometry, floorMaterial);
