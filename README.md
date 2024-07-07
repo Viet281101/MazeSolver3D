@@ -1,8 +1,6 @@
 # 3D Maze Solving
 
-### Libraries
-
-Threejs, dat.gui
+![alt text](src/typescript.svg) & Threejs, dat.gui
 
 ### Compile & Debug
 
