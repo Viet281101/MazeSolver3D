@@ -13,6 +13,7 @@ export class GUIController {
       floorColor: '#C0C0C0',
       wallOpacity: 1.0,
       floorOpacity: 1.0,
+      showEdges: true,
     };
     this.gui = new dat.GUI();
     this.init();
@@ -44,6 +45,9 @@ export class GUIController {
     });
     this.gui.add(this.settings, 'floorOpacity', 0, 1).onChange((value: number) => {
       this.mainApp.updateFloorOpacity(value);
+    });
+    this.gui.add(this.settings, 'showEdges').onChange((value: boolean) => {
+      this.mainApp.toggleEdges(value);
     });
   }
 

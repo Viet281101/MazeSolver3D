@@ -63,6 +63,10 @@ class MainApp {
   public updateFloorOpacity(opacity: number) {
     this.maze.updateFloorOpacity(opacity);
   }
+
+  public toggleEdges(showEdges: boolean) {
+    this.maze.toggleEdges(showEdges);
+  }
 }
 
 window.onload = () => {
