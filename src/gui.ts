@@ -8,9 +8,11 @@ export class GUIController {
   constructor(mainApp: any) {
     this.mainApp = mainApp;
     this.settings = {
-      backgroundColor: '#000',
-      floorColor: '#C0C0C0',
+      backgroundColor: '#000000',
       wallColor: '#808080',
+      floorColor: '#C0C0C0',
+      wallOpacity: 1.0,
+      floorOpacity: 1.0,
     };
     this.gui = new dat.GUI();
     this.init();
@@ -27,16 +29,21 @@ export class GUIController {
       guiContainer.style.transform = 'scale(1.5)';
     }
     this.gui.addColor(this.settings, 'backgroundColor').onChange((value: string) => {
-      const renderer = this.mainApp.getRenderer();
-      if (renderer) {
-        renderer.setClearColor(value);
+      if (this.mainApp.getRenderer()) {
+        this.mainApp.getRenderer().setClearColor(value);
       }
+    });
+    this.gui.addColor(this.settings, 'wallColor').onChange((value: string) => {
+      this.mainApp.updateWallColor(value);
     });
     this.gui.addColor(this.settings, 'floorColor').onChange((value: string) => {
       this.mainApp.updateFloorColor(value);
     });
-    this.gui.addColor(this.settings, 'wallColor').onChange((value: string) => {
-      this.mainApp.updateWallColor(value);
+    this.gui.add(this.settings, 'wallOpacity', 0, 1).onChange((value: number) => {
+      this.mainApp.updateWallOpacity(value);
+    });
+    this.gui.add(this.settings, 'floorOpacity', 0, 1).onChange((value: number) => {
+      this.mainApp.updateFloorOpacity(value);
     });
   }
 
