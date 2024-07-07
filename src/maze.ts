@@ -12,6 +12,8 @@ export class Maze {
 	protected wallThickness: number;
 	protected cellSize: number;
 	protected mazeLayers: THREE.Object3D[];
+	protected wallColor: THREE.Color;
+	protected floorColor: THREE.Color;
 
 	constructor(canvas: HTMLCanvasElement, maze: number[][][], wallHeight: number = 1, wallThickness: number = 0.1, cellSize: number = 1) {
 		this.canvas = canvas;
@@ -25,6 +27,8 @@ export class Maze {
 		this.wallThickness = wallThickness;
 		this.cellSize = cellSize;
 		this.mazeLayers = [];
+		this.wallColor = new THREE.Color(0x808080);
+		this.floorColor = new THREE.Color(0xC0C0C0);
 
 		this.init();
 		this.animate();
@@ -32,7 +36,7 @@ export class Maze {
 
 	protected createWall(x: number, y: number, z: number, width: number, height: number, depth: number) {
 		const geometry = new THREE.BoxGeometry(width, height, depth);
-		const material = new THREE.MeshBasicMaterial({ color: 0x808080 });
+		const material = new THREE.MeshBasicMaterial({ color: this.wallColor });
 		const wall = new THREE.Mesh(geometry, material);
 		wall.position.set(x, y, z);
 		return wall;
@@ -70,6 +74,30 @@ export class Maze {
 	public getRenderer() {
 		return this.renderer;
 	}
+
+	public updateWallColor(color: string) {
+		this.wallColor.set(color);
+		this.updateColors();
+	}
+
+	public updateFloorColor(color: string) {
+		this.floorColor.set(color);
+		this.updateColors();
+	}
+
+	protected updateColors() {
+		this.mazeLayers.forEach(layer => {
+			layer.children.forEach((child: THREE.Object3D) => {
+				if (child instanceof THREE.Mesh) {
+					if (child.geometry instanceof THREE.PlaneGeometry) {
+						(child.material as THREE.MeshBasicMaterial).color = this.floorColor;
+					} else if (child.geometry instanceof THREE.BoxGeometry) {
+						(child.material as THREE.MeshBasicMaterial).color = this.wallColor;
+					}
+				}
+			});
+		});
+	}
 }
 
 export class LayerMaze extends Maze {
@@ -99,7 +127,7 @@ export class LayerMaze extends Maze {
 
 			if (layerIndex === 0) {
 				const floorGeometry = new THREE.PlaneGeometry(layer[0].length * this.cellSize, layer.length * this.cellSize);
-				const floorMaterial = new THREE.MeshBasicMaterial({ color: 0xC0C0C0, side: THREE.DoubleSide });
+				const floorMaterial = new THREE.MeshBasicMaterial({ color: this.floorColor, side: THREE.DoubleSide });
 				const floor = new THREE.Mesh(floorGeometry, floorMaterial);
 				floor.rotation.x = -Math.PI / 2;
 				floor.position.y = -this.wallThickness / 2;
