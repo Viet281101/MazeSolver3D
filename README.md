@@ -1,6 +1,6 @@
 # 3D Maze Solving
 
-![alt text](src/typescript.svg) & Threejs, dat.gui
+![alt text](src/typescript.svg) & threejs, dat.gui
 
 ### Compile & Debug
 
