@@ -80,15 +80,34 @@ export class Maze {
 		return group;
 	}
 
+	protected createSmallFloor(x: number, y: number, z: number, size: number) {
+		const floorGeometry = new THREE.PlaneGeometry(size, size);
+		const floorMaterial = new THREE.MeshBasicMaterial({ color: this.floorColor, side: THREE.DoubleSide, transparent: true, opacity: 0.8 });
+		const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+		floor.rotation.x = -Math.PI / 2;
+		floor.position.set(x, y, z);
+
+		const group = new THREE.Group();
+		group.add(floor);
+
+		if (this.showEdges) {
+			const edges = new THREE.EdgesGeometry(floorGeometry);
+			const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x000000 }));
+			line.rotation.x = -Math.PI / 2;
+			line.position.set(x, y, z);
+			group.add(line);
+		}
+
+		return group;
+	}
+
 	protected init() {
 		this.renderer.setSize(window.innerWidth, window.innerHeight);
 		document.body.appendChild(this.renderer.domElement);
 		this.createMaze();
 	}
 
-	protected createMaze() {
-		// To be implemented by subclasses
-	}
+	protected createMaze() {}
 
 	private animate() {
 		requestAnimationFrame(() => this.animate());
@@ -160,7 +179,7 @@ export class Maze {
 								const edges = new THREE.EdgesGeometry(mesh.geometry);
 								const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x000000 }));
 								line.position.set(mesh.position.x, mesh.position.y, mesh.position.z);
-								line.rotation.copy(mesh.rotation); // Ensure the rotation is correct
+								line.rotation.copy(mesh.rotation);
 								child.add(line);
 							}
 						});
@@ -233,6 +252,17 @@ export class MultiLayerMaze extends Maze {
 					}
 				});
 			});
+
+			if (layerIndex > 0) {
+				layer.forEach((row, rowIndex) => {
+					row.forEach((cell, colIndex) => {
+						if (cell !== 2) {
+							const smallFloor = this.createSmallFloor(colIndex * this.cellSize, layerHeight, -rowIndex * this.cellSize, this.cellSize);
+							mazeLayer.add(smallFloor);
+						}
+					});
+				});
+			}
 
 			if (layerIndex === 0) {
 				const floor = this.createFloor(layer[0].length * this.cellSize, layer.length * this.cellSize, 
