@@ -50,10 +50,7 @@ export class Maze {
 		group.add(wall);
 
 		if (this.showEdges) {
-			const edges = new THREE.EdgesGeometry(geometry);
-			const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x000000 }));
-			line.position.set(x, y, z);
-			group.add(line);
+			group.add(this.createEdges(geometry, x, y, z));
 		}
 
 		return group;
@@ -70,11 +67,7 @@ export class Maze {
 		group.add(floor);
 
 		if (this.showEdges) {
-			const edges = new THREE.EdgesGeometry(floorGeometry);
-			const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x000000 }));
-			line.rotation.x = -Math.PI / 2;
-			line.position.set(x, y, z);
-			group.add(line);
+			group.add(this.createEdges(floorGeometry, x, y, z, -Math.PI / 2));
 		}
 
 		return group;
@@ -91,14 +84,18 @@ export class Maze {
 		group.add(floor);
 
 		if (this.showEdges) {
-			const edges = new THREE.EdgesGeometry(floorGeometry);
-			const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x000000 }));
-			line.rotation.x = -Math.PI / 2;
-			line.position.set(x, y, z);
-			group.add(line);
+			group.add(this.createEdges(floorGeometry, x, y, z, -Math.PI / 2));
 		}
 
 		return group;
+	}
+
+	protected createEdges(geometry: THREE.BufferGeometry, x: number, y: number, z: number, rotationX: number = 0) {
+		const edges = new THREE.EdgesGeometry(geometry);
+		const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x000000 }));
+		line.position.set(x, y, z);
+		line.rotation.x = rotationX;
+		return line;
 	}
 
 	protected init() {
@@ -198,16 +195,16 @@ export class SingleLayerMaze extends Maze {
 	protected createMaze() {
 		this.deleteMaze();
 
-		const mazeLayer = new THREE.Object3D();
+		const maze = new THREE.Object3D();
 
 		this.maze[0].forEach((row, rowIndex) => {
 			row.forEach((cell, colIndex) => {
 				if (cell === 1) {
 					if (colIndex < row.length - 1 && row[colIndex + 1] === 1) {
-						mazeLayer.add(this.createWall(colIndex * this.cellSize + this.cellSize / 2, this.wallHeight / 2, -rowIndex * this.cellSize, this.cellSize, this.wallHeight, this.wallThickness));
+						maze.add(this.createWall(colIndex * this.cellSize + this.cellSize / 2, this.wallHeight / 2, -rowIndex * this.cellSize, this.cellSize, this.wallHeight, this.wallThickness));
 					}
 					if (rowIndex < this.maze[0].length - 1 && this.maze[0][rowIndex + 1][colIndex] === 1) {
-						mazeLayer.add(this.createWall(colIndex * this.cellSize, this.wallHeight / 2, -(rowIndex * this.cellSize + this.cellSize / 2), this.wallThickness, this.wallHeight, this.cellSize));
+						maze.add(this.createWall(colIndex * this.cellSize, this.wallHeight / 2, -(rowIndex * this.cellSize + this.cellSize / 2), this.wallThickness, this.wallHeight, this.cellSize));
 					}
 				}
 			});
@@ -215,10 +212,10 @@ export class SingleLayerMaze extends Maze {
 
 		const floor = this.createFloor(this.maze[0][0].length * this.cellSize, this.maze[0].length * this.cellSize, 
 			this.maze[0][0].length * this.cellSize / 2 - this.cellSize / 2, -this.wallThickness / 2, -this.maze[0].length * this.cellSize / 2 + this.cellSize / 2);
-		mazeLayer.add(floor);
+		maze.add(floor);
 
-		this.mazeLayers.push(mazeLayer);
-		this.scene.add(mazeLayer);
+		this.mazeLayers.push(maze);
+		this.scene.add(maze);
 
 		const mazeCenterX = (this.maze[0][0].length * this.cellSize) / 2 - this.cellSize / 2;
 		const mazeCenterZ = -(this.maze[0].length * this.cellSize) / 2 + this.cellSize / 2;
