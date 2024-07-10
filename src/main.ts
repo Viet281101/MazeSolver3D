@@ -31,6 +31,7 @@ class MainApp {
     ];
     this.maze = new SingleLayerMaze(this.canvas, initialMaze);
     this.guiController = new GUIController(this);
+    this.getRenderer().setClearColor(this.guiController.settings.backgroundColor);
 
     window.addEventListener('resize', () => this.onWindowResize());
   }

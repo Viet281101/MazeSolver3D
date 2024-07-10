@@ -2,13 +2,13 @@ import * as dat from 'dat.gui';
 
 export class GUIController {
   private gui: dat.GUI;
-  private settings: any;
+  public settings: any;
   private mainApp: any;
 
   constructor(mainApp: any) {
     this.mainApp = mainApp;
     this.settings = {
-      backgroundColor: '#000000',
+      backgroundColor: '#999',
       wallColor: '#808080',
       floorColor: '#C0C0C0',
       wallOpacity: 1.0,
@@ -25,9 +25,9 @@ export class GUIController {
     if (guiContainer) {
       guiContainer.classList.add('scaled-gui');
       guiContainer.style.zIndex = '1000';
-      guiContainer.style.right = '-22px';
+      guiContainer.style.right = '-20px';
       guiContainer.style.transformOrigin = 'top right';
-      guiContainer.style.transform = 'scale(1.5)';
+      guiContainer.style.transform = 'scale(1.4)';
     }
     this.gui.addColor(this.settings, 'backgroundColor').onChange((value: string) => {
       if (this.mainApp.getRenderer()) {
