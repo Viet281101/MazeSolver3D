@@ -70,11 +70,9 @@ export class Maze {
 
     const group = new THREE.Group();
     group.add(wall);
-
     if (this.showEdges) {
       group.add(this.createEdges(geometry, x, y, z));
     }
-
     return group;
   }
 
@@ -92,11 +90,9 @@ export class Maze {
 
     const group = new THREE.Group();
     group.add(floor);
-
     if (this.showEdges) {
       group.add(this.createEdges(floorGeometry, x, y, z, -Math.PI / 2));
     }
-
     return group;
   }
 
@@ -114,11 +110,9 @@ export class Maze {
 
     const group = new THREE.Group();
     group.add(floor);
-
     if (this.showEdges) {
       group.add(this.createEdges(floorGeometry, x, y, z, -Math.PI / 2));
     }
-
     return group;
   }
 
@@ -166,32 +160,26 @@ export class Maze {
   public getRenderer() {
     return this.renderer;
   }
-
   public updateWallColor(color: string) {
     this.wallColor.set(color);
     this.updateColors();
   }
-
   public updateFloorColor(color: string) {
     this.floorColor.set(color);
     this.updateColors();
   }
-
   public updateWallOpacity(opacity: number) {
     this.wallOpacity = opacity;
     this.updateColors();
   }
-
   public updateFloorOpacity(opacity: number) {
     this.floorOpacity = opacity;
     this.updateColors();
   }
-
   public toggleEdges(showEdges: boolean) {
     this.showEdges = showEdges;
     this.updateColors();
   }
-
   protected updateColors() {
     this.mazeLayers.forEach(layer => {
       layer.children.forEach((child: THREE.Object3D) => {
