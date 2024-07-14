@@ -50,7 +50,7 @@ export class Toolbar {
     return [
       {
         name: 'Custom Maze',
-        icon: '/MazeSolver3D/src/icon/maze.png',
+        icon: '/MazeSolver3D/icon/maze.png',
         action: () => this.togglePopup('maze'),
         x: 0,
         y: 0,
@@ -59,7 +59,7 @@ export class Toolbar {
       },
       {
         name: 'Solving Maze',
-        icon: '/MazeSolver3D/src/icon/solving.png',
+        icon: '/MazeSolver3D/icon/solving.png',
         action: () => this.togglePopup('solve'),
         x: 0,
         y: 0,
@@ -68,7 +68,7 @@ export class Toolbar {
       },
       {
         name: 'Tutorial',
-        icon: '/MazeSolver3D/src/icon/question.png',
+        icon: '/MazeSolver3D/icon/question.png',
         action: () => this.togglePopup('tutorial'),
         x: 0,
         y: 0,
@@ -77,7 +77,7 @@ export class Toolbar {
       },
       {
         name: 'Settings',
-        icon: '/MazeSolver3D/src/icon/setting.png',
+        icon: '/MazeSolver3D/icon/setting.png',
         action: () => this.togglePopup('settings'),
         x: 0,
         y: 0,
@@ -273,7 +273,7 @@ export class Toolbar {
       document.body.removeChild(this.currentCloseIcon);
     }
     const closeIcon = new Image();
-    closeIcon.src = '/MazeSolver3D/src/icon/close.png';
+    closeIcon.src = '/MazeSolver3D/icon/close.png';
     closeIcon.style.position = 'fixed';
     closeIcon.style.top = this.isMobile ? '56px' : '10px';
     closeIcon.style.left = this.isMobile ? 'calc(50% + 162px)' : '400px';

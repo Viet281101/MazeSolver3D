@@ -13,7 +13,7 @@ export default defineConfig({
     viteStaticCopy({
       targets: [
         {
-          src: 'src/icon',
+          src: 'src',
           dest: 'src',
         },
       ],
