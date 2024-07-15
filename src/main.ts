@@ -1,5 +1,6 @@
 import './style.css';
 import { SingleLayerMaze, MultiLayerMaze } from './maze';
+import { randomizedDepthFirst, randomizedPrims } from './generator';
 import { Toolbar } from './toolbar';
 import { GUIController } from './gui';
 
@@ -76,26 +77,36 @@ class MainApp {
   public toggleEdges(showEdges: boolean) {
     this.maze.toggleEdges(showEdges);
   }
+
+  public generateMaze() {
+    const rdfMaze = randomizedDepthFirst(12, 13);
+    const randomPrimsMaze = randomizedPrims(20, 20);
+    this.updateMaze([randomPrimsMaze], true);
+  }
+
+  createMultiLayerMaze() {
+    const newMaze = [
+      [
+        [1, 0, 1, 1, 1, 1],
+        [1, 0, 0, 1, 0, 1],
+        [1, 1, 0, 0, 0, 1],
+        [1, 0, 0, 0, 0, 1],
+        [1, 1, 1, 1, 1, 1],
+      ],
+      [
+        [1, 0, 1, 1, 1, 1],
+        [1, 0, 0, 1, 0, 1],
+        [1, 0, 0, 1, 1, 1],
+        [1, 0, 0, 0, 0, 1],
+        [1, 1, 1, 1, 1, 1],
+      ],
+    ];
+    this.updateMaze(newMaze, true);
+  }
 }
 
 window.onload = () => {
   const app = new MainApp();
-  // Example usage of updateMaze
-  const newMaze = [
-    [
-      [1, 0, 1, 1, 1, 1],
-      [1, 0, 0, 1, 0, 1],
-      [1, 1, 0, 0, 0, 1],
-      [1, 0, 0, 0, 0, 1],
-      [1, 1, 1, 1, 1, 1],
-    ],
-    [
-      [1, 0, 1, 1, 1, 1],
-      [1, 0, 0, 1, 0, 1],
-      [1, 0, 0, 1, 1, 1],
-      [1, 0, 0, 0, 0, 1],
-      [1, 1, 1, 1, 1, 1],
-    ],
-  ];
-  // app.updateMaze(newMaze, true);
+  // app.generateMaze();
+  // app.createMultiLayerMaze();
 };
