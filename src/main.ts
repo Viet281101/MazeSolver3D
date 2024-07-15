@@ -52,6 +52,7 @@ class MainApp {
     } else {
       this.maze = new SingleLayerMaze(this.canvas, newMaze);
     }
+    this.getRenderer().setClearColor(this.guiController.settings.backgroundColor);
   }
 
   public getRenderer() {
@@ -79,9 +80,17 @@ class MainApp {
   }
 
   public generateMaze() {
-    const rdfMaze = randomizedDepthFirst(12, 13);
-    const randomPrimsMaze = randomizedPrims(20, 20);
-    this.updateMaze([randomPrimsMaze], true);
+    const rdfMaze = randomizedDepthFirst(12, 13, 'diagonal', 'horizontal');
+    this.printMaze(rdfMaze);
+    this.updateMaze([rdfMaze], true);
+
+    // const randomPrimsMaze = randomizedPrims(20, 20, 'diagonal', 'none');
+    // this.printMaze(randomPrimsMaze);
+    // this.updateMaze([randomPrimsMaze], true);
+  }
+
+  private printMaze(maze: number[][]) {
+    console.table(maze);
   }
 
   createMultiLayerMaze() {
