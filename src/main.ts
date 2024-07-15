@@ -1,12 +1,13 @@
 import './style.css';
-import { LayerMaze } from './maze';
+import { SingleLayerMaze, MultiLayerMaze } from './maze';
+import { randomizedDepthFirst, randomizedPrims } from './generator';
 import { Toolbar } from './toolbar';
 import { GUIController } from './gui';
 
 class MainApp {
 	private canvas: HTMLCanvasElement;
 	private toolbar: Toolbar;
-	private maze: LayerMaze;
+	private maze: SingleLayerMaze | MultiLayerMaze;
 	private guiController: GUIController;
 
 	constructor() {
@@ -14,15 +15,24 @@ class MainApp {
 		this.toolbar = new Toolbar();
 		const initialMaze = [
 			[
-				[1, 0, 1, 1, 1, 1],
-				[1, 0, 0, 1, 0, 1],
-				[1, 1, 0, 0, 0, 1],
-				[1, 0, 0, 0, 0, 1],
-				[1, 1, 1, 1, 1, 1],
+				[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1],
+				[1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+				[1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 0, 1],
+				[1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1],
+				[1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1],
+				[1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1],
+				[1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1],
+				[1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1],
+				[1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 0, 1],
+				[1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1],
+				[1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1],
+				[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+				[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
 			],
 		];
-		this.maze = new LayerMaze(this.canvas, initialMaze);
+		this.maze = new SingleLayerMaze(this.canvas, initialMaze);
 		this.guiController = new GUIController(this);
+		this.getRenderer().setClearColor(this.guiController.settings.backgroundColor);
 
 		window.addEventListener('resize', () => this.onWindowResize());
 	}
@@ -35,34 +45,76 @@ class MainApp {
 		this.guiController.checkWindowSize();
 	}
 
-	public updateMaze(newMaze: number[][][]) {
+	public updateMaze(newMaze: number[][][], multiLayer: boolean = false) {
 		this.maze.deleteMaze();
-		this.maze = new LayerMaze(this.canvas, newMaze);
+		if (multiLayer) {
+			this.maze = new MultiLayerMaze(this.canvas, newMaze);
+		} else {
+			this.maze = new SingleLayerMaze(this.canvas, newMaze);
+		}
+		this.getRenderer().setClearColor(this.guiController.settings.backgroundColor);
 	}
 
 	public getRenderer() {
 		return this.maze.getRenderer();
 	}
+
+	public updateWallColor(color: string) {
+		this.maze.updateWallColor(color);
+	}
+
+	public updateFloorColor(color: string) {
+		this.maze.updateFloorColor(color);
+	}
+
+	public updateWallOpacity(opacity: number) {
+		this.maze.updateWallOpacity(opacity);
+	}
+
+	public updateFloorOpacity(opacity: number) {
+		this.maze.updateFloorOpacity(opacity);
+	}
+
+	public toggleEdges(showEdges: boolean) {
+		this.maze.toggleEdges(showEdges);
+	}
+
+	public generateMaze() {
+		const rdfMaze = randomizedDepthFirst(12, 13, 'diagonal', 'horizontal');
+		this.printMaze(rdfMaze);
+		this.updateMaze([rdfMaze], true);
+
+		// const randomPrimsMaze = randomizedPrims(20, 20, 'diagonal', 'none');
+		// this.printMaze(randomPrimsMaze);
+		// this.updateMaze([randomPrimsMaze], true);
+	}
+
+	private printMaze(maze: number[][]) {
+		console.table(maze);
+	}
+
+	createMultiLayerMaze() {
+		const newMaze = [
+			[
+				[1, 0, 1, 1, 1, 1],
+				[1, 0, 0, 1, 0, 1],
+				[1, 1, 0, 0, 0, 1],
+				[1, 0, 0, 0, 0, 1],
+				[1, 1, 1, 1, 1, 1],
+			], [
+				[1, 0, 1, 1, 1, 1],
+				[1, 0, 0, 1, 0, 1],
+				[1, 0, 0, 1, 1, 1],
+				[1, 0, 0, 0, 0, 1],
+				[1, 1, 1, 1, 1, 1],
+			],
+		];
+		this.updateMaze(newMaze, true);
+	}
 }
 
 window.onload = () => {
 	const app = new MainApp();
-	// Example usage of updateMaze
-	const newMaze = [
-		[
-			[1, 0, 1, 1, 1, 1],
-			[1, 0, 0, 1, 0, 1],
-			[1, 1, 0, 0, 0, 1],
-			[1, 0, 0, 0, 0, 1],
-			[1, 1, 1, 1, 1, 1],
-		],
-		[
-			[1, 0, 1, 1, 1, 1],
-			[1, 0, 0, 1, 0, 1],
-			[1, 0, 0, 1, 1, 1],
-			[1, 0, 0, 0, 0, 1],
-			[1, 1, 1, 1, 1, 1],
-		],
-	];
-	// app.updateMaze(newMaze);
+	// app.generateMaze();
+	// app.createMultiLayerMaze();
 };

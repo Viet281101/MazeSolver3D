@@ -2,13 +2,18 @@ import * as dat from 'dat.gui';
 
 export class GUIController {
 	private gui: dat.GUI;
-	private settings: any;
+	public settings: any;
 	private mainApp: any;
 
 	constructor(mainApp: any) {
 		this.mainApp = mainApp;
 		this.settings = {
-			backgroundColor: '#000',
+			backgroundColor: '#999',
+			wallColor: '#808080',
+			floorColor: '#C0C0C0',
+			wallOpacity: 1.0,
+			floorOpacity: 1.0,
+			showEdges: true,
 		};
 		this.gui = new dat.GUI();
 		this.init();
@@ -20,15 +25,29 @@ export class GUIController {
 		if (guiContainer) {
 			guiContainer.classList.add('scaled-gui');
 			guiContainer.style.zIndex = '1000';
-			guiContainer.style.right = '-22px';
+			guiContainer.style.right = '-20px';
 			guiContainer.style.transformOrigin = 'top right';
-			guiContainer.style.transform = 'scale(1.5)';
+			guiContainer.style.transform = 'scale(1.4)';
 		}
 		this.gui.addColor(this.settings, 'backgroundColor').onChange((value: string) => {
-			const renderer = this.mainApp.getRenderer();
-			if (renderer) {
-				renderer.setClearColor(value);
+			if (this.mainApp.getRenderer()) {
+				this.mainApp.getRenderer().setClearColor(value);
 			}
+		});
+		this.gui.addColor(this.settings, 'wallColor').onChange((value: string) => {
+			this.mainApp.updateWallColor(value);
+		});
+		this.gui.addColor(this.settings, 'floorColor').onChange((value: string) => {
+			this.mainApp.updateFloorColor(value);
+		});
+		this.gui.add(this.settings, 'wallOpacity', 0, 1).onChange((value: number) => {
+			this.mainApp.updateWallOpacity(value);
+		});
+		this.gui.add(this.settings, 'floorOpacity', 0, 1).onChange((value: number) => {
+			this.mainApp.updateFloorOpacity(value);
+		});
+		this.gui.add(this.settings, 'showEdges').onChange((value: boolean) => {
+			this.mainApp.toggleEdges(value);
 		});
 	}
 
