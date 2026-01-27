@@ -1,5 +1,6 @@
 import './style.css';
-import { SingleLayerMaze, MultiLayerMaze } from './maze';
+import { SingleLayerMaze } from './maze/SingleLayerMaze';
+import { MultiLayerMaze } from './maze/MultiLayerMaze';
 import { randomizedDepthFirst, randomizedPrims } from './generator';
 import { Toolbar } from './toolbar';
 import { GUIController } from './gui';
