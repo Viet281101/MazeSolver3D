@@ -1,24 +1,27 @@
 {
-	"name": "maze-solver-3d",
-	"private": true,
-	"version": "0.0.0",
-	"type": "module",
-	"scripts": {
-		"dev": "vite",
-		"build": "tsc && vite build",
-		"preview": "vite preview",
-		"deploy": "gh-pages -d dist"
-	},
-	"devDependencies": {
-		"@types/dat.gui": "^0.7.13",
-		"gh-pages": "^6.1.1",
-		"typescript": "^5.2.2",
-		"vite": "^5.3.1",
-		"vite-plugin-static-copy": "^1.0.6"
-	},
-	"dependencies": {
-		"@types/three": "^0.166.0",
-		"dat.gui": "^0.7.9",
-		"three": "^0.166.0"
-	}
+  "name": "maze-solver-3d",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "deploy": "gh-pages -d dist",
+    "format": "prettier --write ."
+  },
+  "devDependencies": {
+    "@types/dat.gui": "^0.7.13",
+    "eslint-config-prettier": "^10.1.8",
+    "gh-pages": "^6.1.1",
+    "prettier": "^3.8.1",
+    "typescript": "^5.2.2",
+    "vite": "^5.3.1",
+    "vite-plugin-static-copy": "^1.0.6"
+  },
+  "dependencies": {
+    "@types/three": "^0.166.0",
+    "dat.gui": "^0.7.9",
+    "three": "^0.166.0"
+  }
 }
