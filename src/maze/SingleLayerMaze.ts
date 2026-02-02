@@ -1,69 +1,97 @@
-import { Maze } from './Maze';
+import { Maze, MazeConfig } from './Maze';
 import * as THREE from 'three';
 
+/**
+ * SingleLayerMaze - Maze with a single layer
+ */
 export class SingleLayerMaze extends Maze {
-  constructor(
-    canvas: HTMLCanvasElement,
-    maze: number[][][],
-    wallHeight: number = 1,
-    wallThickness: number = 0.1,
-    cellSize: number = 1
-  ) {
-    super(canvas, maze, wallHeight, wallThickness, cellSize);
+  constructor(canvas: HTMLCanvasElement, maze: number[][][], config?: MazeConfig) {
+    super(canvas, maze, config);
   }
 
-  protected createMaze() {
+  protected createMaze(): void {
     this.deleteMaze();
 
-    const maze = new THREE.Object3D();
+    const mazeLayer = new THREE.Object3D();
+    const layer = this.maze[0];
 
-    this.maze[0].forEach((row, rowIndex) => {
+    // Create walls
+    this.createWalls(layer, mazeLayer);
+
+    // Create main floor
+    this.createMainFloor(layer, mazeLayer);
+
+    // Add to scene
+    this.mazeLayers.push(mazeLayer);
+    this.scene.add(mazeLayer);
+
+    // Position camera
+    this.positionCameraForMaze(layer);
+  }
+
+  /**
+   * Create walls for layer
+   */
+  private createWalls(layer: number[][], mazeLayer: THREE.Object3D): void {
+    layer.forEach((row, rowIndex) => {
       row.forEach((cell, colIndex) => {
         if (cell === 1) {
+          // Horizontal wall (connects to right cell)
           if (colIndex < row.length - 1 && row[colIndex + 1] === 1) {
-            maze.add(
-              this.createWall(
-                colIndex * this.cellSize + this.cellSize / 2,
-                this.wallHeight / 2,
-                -rowIndex * this.cellSize,
-                this.cellSize,
-                this.wallHeight,
-                this.wallThickness
-              )
-            );
+            const wall = this.meshFactory.createWall({
+              x: colIndex * this.cellSize + this.cellSize / 2,
+              y: this.wallHeight / 2,
+              z: -rowIndex * this.cellSize,
+              width: this.cellSize,
+              height: this.wallHeight,
+              depth: this.wallThickness,
+            });
+            mazeLayer.add(wall);
           }
-          if (rowIndex < this.maze[0].length - 1 && this.maze[0][rowIndex + 1][colIndex] === 1) {
-            maze.add(
-              this.createWall(
-                colIndex * this.cellSize,
-                this.wallHeight / 2,
-                -(rowIndex * this.cellSize + this.cellSize / 2),
-                this.wallThickness,
-                this.wallHeight,
-                this.cellSize
-              )
-            );
+
+          // Vertical wall (connects to bottom cell)
+          if (rowIndex < layer.length - 1 && layer[rowIndex + 1][colIndex] === 1) {
+            const wall = this.meshFactory.createWall({
+              x: colIndex * this.cellSize,
+              y: this.wallHeight / 2,
+              z: -(rowIndex * this.cellSize + this.cellSize / 2),
+              width: this.wallThickness,
+              height: this.wallHeight,
+              depth: this.cellSize,
+            });
+            mazeLayer.add(wall);
           }
         }
       });
     });
+  }
 
-    const floor = this.createFloor(
-      this.maze[0][0].length * this.cellSize,
-      this.maze[0].length * this.cellSize,
-      (this.maze[0][0].length * this.cellSize) / 2 - this.cellSize / 2,
-      -this.wallThickness / 2,
-      (-this.maze[0].length * this.cellSize) / 2 + this.cellSize / 2
-    );
-    maze.add(floor);
+  /**
+   * Create main floor
+   */
+  private createMainFloor(layer: number[][], mazeLayer: THREE.Object3D): void {
+    const floorWidth = layer[0].length * this.cellSize;
+    const floorHeight = layer.length * this.cellSize;
 
-    this.mazeLayers.push(maze);
-    this.scene.add(maze);
+    const floor = this.meshFactory.createFloor({
+      x: floorWidth / 2 - this.cellSize / 2,
+      y: -this.wallThickness / 2,
+      z: -(floorHeight / 2) + this.cellSize / 2,
+      width: floorWidth,
+      height: floorHeight,
+    });
 
-    const mazeCenterX = (this.maze[0][0].length * this.cellSize) / 2 - this.cellSize / 2;
-    const mazeCenterZ = -(this.maze[0].length * this.cellSize) / 2 + this.cellSize / 2;
-    this.camera.position.set(mazeCenterX, 5, this.maze[0].length * this.cellSize);
-    this.controls.target.set(mazeCenterX, 0, mazeCenterZ);
-    this.controls.update();
+    mazeLayer.add(floor);
+  }
+
+  /**
+   * Position camera to view entire maze
+   */
+  private positionCameraForMaze(layer: number[][]): void {
+    const mazeCenterX = (layer[0].length * this.cellSize) / 2 - this.cellSize / 2;
+    const mazeCenterZ = -(layer.length * this.cellSize) / 2 + this.cellSize / 2;
+    const distance = layer.length * this.cellSize;
+
+    this.positionCamera(mazeCenterX, mazeCenterZ, distance);
   }
 }

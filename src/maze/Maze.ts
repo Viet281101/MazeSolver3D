@@ -1,31 +1,68 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+import { ResourceManager } from '../resources/ResourceManager';
+import { DisposalHelper } from '../resources/DisposalHelper';
+import { MeshFactory } from '../resources/MeshFactory';
 
-export class Maze {
+export interface MazeConfig {
+  wallHeight?: number;
+  wallThickness?: number;
+  cellSize?: number;
+}
+
+/**
+ * Base Maze Class - Manages Three.js scene and rendering
+ * Refactored with proper memory management
+ */
+export abstract class Maze {
+  // Three.js core
   protected canvas: HTMLCanvasElement;
   protected scene: THREE.Scene;
   protected camera: THREE.PerspectiveCamera;
   protected renderer: THREE.WebGLRenderer;
   protected controls: OrbitControls;
+
+  // Maze data
   protected maze: number[][][];
+  protected mazeLayers: THREE.Object3D[] = [];
+
+  // Configuration
   protected wallHeight: number;
   protected wallThickness: number;
   protected cellSize: number;
-  protected mazeLayers: THREE.Object3D[];
+
+  // Visual properties
   protected wallColor: THREE.Color;
   protected floorColor: THREE.Color;
   protected wallOpacity: number;
   protected floorOpacity: number;
   protected showEdges: boolean;
 
-  constructor(
-    canvas: HTMLCanvasElement,
-    maze: number[][][],
-    wallHeight: number = 1,
-    wallThickness: number = 0.1,
-    cellSize: number = 1
-  ) {
+  // Resource management
+  protected resourceManager: ResourceManager;
+  protected meshFactory: MeshFactory;
+
+  // Animation control
+  private animationId: number | null = null;
+  private isDisposed: boolean = false;
+
+  constructor(canvas: HTMLCanvasElement, maze: number[][][], config: MazeConfig = {}) {
     this.canvas = canvas;
+    this.maze = maze;
+
+    // Configuration với defaults
+    this.wallHeight = config.wallHeight ?? 1;
+    this.wallThickness = config.wallThickness ?? 0.1;
+    this.cellSize = config.cellSize ?? 1;
+
+    // Visual defaults
+    this.wallColor = new THREE.Color(0x808080);
+    this.floorColor = new THREE.Color(0xc0c0c0);
+    this.wallOpacity = 1.0;
+    this.floorOpacity = 1.0;
+    this.showEdges = true;
+
+    // Initialize Three.js
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(
       75,
@@ -33,179 +70,190 @@ export class Maze {
       0.1,
       1000
     );
-    this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas });
+    this.renderer = new THREE.WebGLRenderer({
+      canvas: this.canvas,
+      antialias: true,
+    });
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
 
-    this.maze = maze;
-    this.wallHeight = wallHeight;
-    this.wallThickness = wallThickness;
-    this.cellSize = cellSize;
-    this.mazeLayers = [];
-    this.wallColor = new THREE.Color(0x808080);
-    this.floorColor = new THREE.Color(0xc0c0c0);
-    this.wallOpacity = 1.0;
-    this.floorOpacity = 1.0;
-    this.showEdges = true;
+    // Initialize resource managers
+    this.resourceManager = new ResourceManager();
+    this.meshFactory = new MeshFactory(
+      this.resourceManager,
+      this.wallColor,
+      this.floorColor,
+      this.wallOpacity,
+      this.floorOpacity,
+      this.showEdges
+    );
 
     this.init();
-    this.animate();
   }
 
-  protected createWall(
-    x: number,
-    y: number,
-    z: number,
-    width: number,
-    height: number,
-    depth: number
-  ) {
-    const geometry = new THREE.BoxGeometry(width, height, depth);
-    const material = new THREE.MeshBasicMaterial({
-      color: this.wallColor,
-      transparent: true,
-      opacity: this.wallOpacity,
-    });
-    const wall = new THREE.Mesh(geometry, material);
-    wall.position.set(x, y, z);
-
-    const group = new THREE.Group();
-    group.add(wall);
-    if (this.showEdges) {
-      group.add(this.createEdges(geometry, x, y, z));
-    }
-    return group;
-  }
-
-  protected createFloor(width: number, height: number, x: number, y: number, z: number) {
-    const floorGeometry = new THREE.PlaneGeometry(width, height);
-    const floorMaterial = new THREE.MeshBasicMaterial({
-      color: this.floorColor,
-      side: THREE.DoubleSide,
-      transparent: true,
-      opacity: this.floorOpacity,
-    });
-    const floor = new THREE.Mesh(floorGeometry, floorMaterial);
-    floor.rotation.x = -Math.PI / 2;
-    floor.position.set(x, y, z);
-
-    const group = new THREE.Group();
-    group.add(floor);
-    if (this.showEdges) {
-      group.add(this.createEdges(floorGeometry, x, y, z, -Math.PI / 2));
-    }
-    return group;
-  }
-
-  protected createSmallFloor(x: number, y: number, z: number, size: number) {
-    const floorGeometry = new THREE.PlaneGeometry(size, size);
-    const floorMaterial = new THREE.MeshBasicMaterial({
-      color: this.floorColor,
-      side: THREE.DoubleSide,
-      transparent: true,
-      opacity: 0.8,
-    });
-    const floor = new THREE.Mesh(floorGeometry, floorMaterial);
-    floor.rotation.x = -Math.PI / 2;
-    floor.position.set(x, y, z);
-
-    const group = new THREE.Group();
-    group.add(floor);
-    if (this.showEdges) {
-      group.add(this.createEdges(floorGeometry, x, y, z, -Math.PI / 2));
-    }
-    return group;
-  }
-
-  protected createEdges(
-    geometry: THREE.BufferGeometry,
-    x: number,
-    y: number,
-    z: number,
-    rotationX: number = 0
-  ) {
-    const edges = new THREE.EdgesGeometry(geometry);
-    const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x000000 }));
-    line.position.set(x, y, z);
-    line.rotation.x = rotationX;
-    return line;
-  }
-
-  protected init() {
+  /**
+   * Initialize renderer and start animation loop
+   */
+  protected init(): void {
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    document.body.appendChild(this.renderer.domElement);
+    this.renderer.setPixelRatio(window.devicePixelRatio);
+
+    // Configure controls
+    this.controls.enableDamping = true;
+    this.controls.dampingFactor = 0.05;
+
     this.createMaze();
+    this.startAnimation();
   }
 
-  protected createMaze() {}
+  /**
+   * Abstract method - must implement in subclass
+   */
+  protected abstract createMaze(): void;
 
-  private animate() {
-    requestAnimationFrame(() => this.animate());
+  /**
+   * Position camera to view entire maze
+   */
+  protected positionCamera(centerX: number, centerZ: number, distance: number): void {
+    this.camera.position.set(centerX, 5, distance);
+    this.controls.target.set(centerX, 0, centerZ);
     this.controls.update();
-    this.renderer.render(this.scene, this.camera);
   }
 
-  public resize() {
+  /**
+   * Start animation loop
+   */
+  private startAnimation(): void {
+    if (this.isDisposed) return;
+
+    const animate = () => {
+      if (this.isDisposed) return;
+
+      this.animationId = requestAnimationFrame(animate);
+      this.controls.update();
+      this.renderer.render(this.scene, this.camera);
+    };
+
+    animate();
+  }
+
+  /**
+   * Stop animation loop
+   */
+  private stopAnimation(): void {
+    if (this.animationId !== null) {
+      cancelAnimationFrame(this.animationId);
+      this.animationId = null;
+    }
+  }
+
+  /**
+   * Resize handler
+   */
+  public resize(): void {
+    if (this.isDisposed) return;
+
     this.camera.aspect = window.innerWidth / window.innerHeight;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(window.innerWidth, window.innerHeight);
   }
 
-  public deleteMaze() {
+  /**
+   * Delete maze layers (giữ scene)
+   */
+  public deleteMaze(): void {
     this.mazeLayers.forEach(layer => {
+      DisposalHelper.disposeObject(layer);
       this.scene.remove(layer);
     });
     this.mazeLayers = [];
   }
 
-  public getRenderer() {
+  /**
+   * Destroy entire maze instance
+   */
+  public destroy(): void {
+    if (this.isDisposed) return;
+
+    this.isDisposed = true;
+
+    // Stop animation
+    this.stopAnimation();
+
+    // Delete maze
+    this.deleteMaze();
+
+    // Dispose controls
+    this.controls.dispose();
+
+    // Dispose resources
+    this.resourceManager.dispose();
+
+    // Dispose scene
+    DisposalHelper.disposeScene(this.scene);
+
+    // Dispose renderer
+    this.renderer.dispose();
+  }
+
+  // ========== PUBLIC API ==========
+
+  public getRenderer(): THREE.WebGLRenderer {
     return this.renderer;
   }
-  public updateWallColor(color: string) {
+
+  public updateWallColor(color: string): void {
     this.wallColor.set(color);
-    this.updateColors();
+    this.resourceManager.updateMaterialColor('wall', this.wallColor);
+    this.meshFactory.updateSettings({ wallColor: this.wallColor });
   }
-  public updateFloorColor(color: string) {
+
+  public updateFloorColor(color: string): void {
     this.floorColor.set(color);
-    this.updateColors();
+    this.resourceManager.updateMaterialColor('floor', this.floorColor);
+    this.meshFactory.updateSettings({ floorColor: this.floorColor });
   }
-  public updateWallOpacity(opacity: number) {
+
+  public updateWallOpacity(opacity: number): void {
     this.wallOpacity = opacity;
-    this.updateColors();
+    this.resourceManager.updateMaterialOpacity('wall', opacity);
+    this.meshFactory.updateSettings({ wallOpacity: opacity });
   }
-  public updateFloorOpacity(opacity: number) {
+
+  public updateFloorOpacity(opacity: number): void {
     this.floorOpacity = opacity;
-    this.updateColors();
+    this.resourceManager.updateMaterialOpacity('floor', opacity);
+    this.meshFactory.updateSettings({ floorOpacity: opacity });
   }
-  public toggleEdges(showEdges: boolean) {
+
+  public toggleEdges(showEdges: boolean): void {
+    if (this.showEdges === showEdges) return;
+
     this.showEdges = showEdges;
-    this.updateColors();
+    this.meshFactory.updateSettings({ showEdges });
+    this.rebuildEdges();
   }
-  protected updateColors() {
+
+  /**
+   * Rebuild edges on all maze layers
+   */
+  private rebuildEdges(): void {
     this.mazeLayers.forEach(layer => {
-      layer.children.forEach((child: THREE.Object3D) => {
+      layer.children.forEach(child => {
         if (child instanceof THREE.Group) {
-          child.children.forEach(mesh => {
-            if (mesh instanceof THREE.Mesh) {
-              if (mesh.geometry instanceof THREE.PlaneGeometry) {
-                (mesh.material as THREE.MeshBasicMaterial).color = this.floorColor;
-                (mesh.material as THREE.MeshBasicMaterial).opacity = this.floorOpacity;
-              } else if (mesh.geometry instanceof THREE.BoxGeometry) {
-                (mesh.material as THREE.MeshBasicMaterial).color = this.wallColor;
-                (mesh.material as THREE.MeshBasicMaterial).opacity = this.wallOpacity;
-              }
-            }
-          });
-          child.children = child.children.filter(mesh => !(mesh instanceof THREE.LineSegments));
+          // Remove old edges
+          DisposalHelper.disposeEdgesFromGroup(child);
+
+          // Add new edges if needed
           if (this.showEdges) {
-            child.children.forEach(mesh => {
-              if (mesh instanceof THREE.Mesh) {
-                const edges = new THREE.EdgesGeometry(mesh.geometry);
-                const line = new THREE.LineSegments(
-                  edges,
-                  new THREE.LineBasicMaterial({ color: 0x000000 })
-                );
-                line.position.set(mesh.position.x, mesh.position.y, mesh.position.z);
-                line.rotation.copy(mesh.rotation);
+            child.children.forEach(obj => {
+              if (obj instanceof THREE.Mesh) {
+                const edges = new THREE.EdgesGeometry(obj.geometry);
+                const material = this.resourceManager.getEdgeMaterial();
+                const line = new THREE.LineSegments(edges, material);
+
+                line.position.copy(obj.position);
+                line.rotation.copy(obj.rotation);
+
                 child.add(line);
               }
             });
