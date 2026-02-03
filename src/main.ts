@@ -1,7 +1,7 @@
 import './style.css';
 import { SingleLayerMaze } from './maze/SingleLayerMaze';
 import { MultiLayerMaze } from './maze/MultiLayerMaze';
-import { Toolbar } from './toolbar';
+import { Toolbar } from './sidebar/toolbar';
 import { GUIController } from './gui';
 
 /**
@@ -205,7 +205,7 @@ let app: MainApp | null = null;
 window.onload = () => {
   try {
     app = new MainApp();
-    app.createMultiLayerMaze();
+    // app.createMultiLayerMaze();
     (window as any).mazeApp = app;
   } catch (error) {
     console.error('Failed to initialize application:', error);

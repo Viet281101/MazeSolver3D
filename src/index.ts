@@ -1,5 +1,5 @@
 /**
- * Main exports cho 3D Maze Visualizer
+ * Main exports for 3D Maze Visualizer
  */
 
 // Resources
