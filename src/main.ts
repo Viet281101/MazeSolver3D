@@ -3,6 +3,7 @@ import { SingleLayerMaze } from './maze/SingleLayerMaze';
 import { MultiLayerMaze } from './maze/MultiLayerMaze';
 import { Toolbar } from './sidebar/toolbar';
 import { GUIController } from './gui';
+import { PreviewWindow } from './preview/PreviewWindow';
 
 /**
  * Interface for MazeController
@@ -24,6 +25,7 @@ class MainApp implements MazeController {
   private toolbar: Toolbar;
   private maze: SingleLayerMaze | MultiLayerMaze;
   private guiController: GUIController;
+  private previewWindow: PreviewWindow;
   private resizeHandler: () => void;
 
   constructor() {
@@ -46,12 +48,29 @@ class MainApp implements MazeController {
       autoHide: true,
     });
 
+    // Initialize preview window
+    this.previewWindow = new PreviewWindow({
+      title: 'Preview',
+      width: 300,
+      height: 320,
+    });
+
     // Set initial background color
     this.getRenderer().setClearColor(this.guiController.settings.backgroundColor);
+
+    // Update preview with initial maze
+    this.updatePreview();
 
     // Setup event listeners
     this.resizeHandler = () => this.onWindowResize();
     window.addEventListener('resize', this.resizeHandler);
+
+    // Add keyboard shortcut to toggle preview (P key)
+    window.addEventListener('keydown', e => {
+      if (e.key === 'p' || e.key === 'P') {
+        this.previewWindow.toggle();
+      }
+    });
   }
 
   /**
@@ -106,6 +125,20 @@ class MainApp implements MazeController {
 
     // Apply GUI settings to new maze
     this.applyGUISettings();
+
+    // Update preview
+    this.updatePreview();
+  }
+
+  /**
+   * Update preview window with current maze data
+   */
+  private updatePreview(): void {
+    // Get first layer of maze for 2D preview
+    const mazeData = this.maze['maze'];
+    if (mazeData && mazeData.length > 0) {
+      this.previewWindow.updateMaze(mazeData[0]);
+    }
   }
 
   /**
@@ -159,6 +192,13 @@ class MainApp implements MazeController {
     this.updateMaze(singleLayerData, false);
   }
 
+  /**
+   * Toggle preview window visibility
+   */
+  public togglePreview(): void {
+    this.previewWindow.toggle();
+  }
+
   // ========== MazeController Interface Implementation ==========
 
   public getRenderer(): any {
@@ -195,6 +235,7 @@ class MainApp implements MazeController {
     // Destroy components
     this.maze.destroy();
     this.guiController.destroy();
+    this.previewWindow.destroy();
   }
 }
 
