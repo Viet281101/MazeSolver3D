@@ -17,6 +17,7 @@ export class PreviewWindow {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
   private closeButton: HTMLButtonElement;
+  private legend: HTMLDivElement;
 
   private isDragging: boolean = false;
   private dragStartX: number = 0;
@@ -59,6 +60,13 @@ export class PreviewWindow {
     this.closeButton.className = 'preview-close-btn';
     this.closeButton.innerHTML = '×';
 
+    // Create legend
+    this.legend = document.createElement('div');
+    this.legend.className = 'preview-legend';
+    this.legend.innerHTML =
+      '<span class="preview-legend-item"><i class="preview-swatch wall"></i>Wall</span>' +
+      '<span class="preview-legend-item"><i class="preview-swatch path"></i>Path</span>';
+
     // Create canvas
     this.canvas = document.createElement('canvas');
     this.canvas.className = 'preview-canvas';
@@ -74,6 +82,7 @@ export class PreviewWindow {
     // Assemble window
     this.titleBar.appendChild(this.closeButton);
     this.container.appendChild(this.titleBar);
+    this.container.appendChild(this.legend);
     this.container.appendChild(this.canvas);
     document.body.appendChild(this.container);
 
@@ -176,7 +185,7 @@ export class PreviewWindow {
     for (let row = 0; row < rows; row++) {
       for (let col = 0; col < cols; col++) {
         const x = offsetX + col * cellSize;
-        const y = offsetY + row * cellSize;
+        const y = offsetY + (rows - 1 - row) * cellSize;
 
         if (this.mazeData[row][col] === 1) {
           // Wall - dark gray

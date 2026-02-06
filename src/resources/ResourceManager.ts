@@ -76,8 +76,11 @@ export class ResourceManager {
         color: 0x000000,
         transparent: true,
         opacity: 0.9,
-        depthTest: false,
+        depthTest: true,
         depthWrite: false,
+        polygonOffset: true,
+        polygonOffsetFactor: -1,
+        polygonOffsetUnits: -1,
       });
     }
     return this.edgeMaterial;

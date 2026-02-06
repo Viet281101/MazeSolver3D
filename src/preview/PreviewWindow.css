@@ -29,6 +29,37 @@
   height: 20px;
 }
 
+.preview-legend {
+  display: flex;
+  gap: 8px;
+  padding: 4px 8px;
+  font-size: 11px;
+  color: #e0e0e0;
+  background: #333;
+  border-bottom: 1px solid #2a2a2a;
+}
+
+.preview-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.preview-swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 1px solid #1a1a1a;
+}
+
+.preview-swatch.wall {
+  background: #808080;
+}
+
+.preview-swatch.path {
+  background: #c0c0c0;
+}
+
 .preview-close-btn {
   background: none;
   border: none;
@@ -58,7 +89,7 @@
 .preview-canvas {
   display: block;
   width: 100%;
-  height: calc(100% - 20px);
+  height: calc(100% - 44px);
   background-color: #2a2a2a;
   image-rendering: pixelated;
   image-rendering: crisp-edges;

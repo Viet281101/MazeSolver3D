@@ -120,7 +120,7 @@ export abstract class Maze {
    * Position camera to view entire maze
    */
   protected positionCamera(centerX: number, centerZ: number, distance: number): void {
-    this.camera.position.set(centerX, 5, distance);
+    this.camera.position.set(centerX, 10, distance);
     this.controls.target.set(centerX, 0, centerZ);
     this.controls.update();
   }
