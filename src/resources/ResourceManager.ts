@@ -7,6 +7,8 @@ import * as THREE from 'three';
 export class ResourceManager {
   private materials: Map<string, THREE.Material> = new Map();
   private geometries: Map<string, THREE.BufferGeometry> = new Map();
+  private edgeGeometries: Map<string, THREE.EdgesGeometry> = new Map();
+  private edgeMaterial: THREE.LineBasicMaterial | null = null;
 
   /**
    * Get or create material with unique key
@@ -17,7 +19,7 @@ export class ResourceManager {
     color: THREE.Color,
     opacity: number
   ): THREE.MeshBasicMaterial {
-    const materialKey = `${key}-${type}-${color.getHexString()}-${opacity}`;
+    const materialKey = `${key}-${type}`;
 
     if (!this.materials.has(materialKey)) {
       const material = new THREE.MeshBasicMaterial({
@@ -66,10 +68,32 @@ export class ResourceManager {
   }
 
   /**
-   * Create edge material (not cached because used little)
+   * Get or create edge material (shared)
    */
   getEdgeMaterial(): THREE.LineBasicMaterial {
-    return new THREE.LineBasicMaterial({ color: 0x000000 });
+    if (!this.edgeMaterial) {
+      this.edgeMaterial = new THREE.LineBasicMaterial({
+        color: 0x000000,
+        transparent: true,
+        opacity: 0.9,
+        depthTest: false,
+        depthWrite: false,
+      });
+    }
+    return this.edgeMaterial;
+  }
+
+  /**
+   * Get or create edges geometry for a base geometry
+   */
+  getEdgesGeometry(baseGeometry: THREE.BufferGeometry): THREE.EdgesGeometry {
+    const key = `edges-${baseGeometry.uuid}`;
+
+    if (!this.edgeGeometries.has(key)) {
+      this.edgeGeometries.set(key, new THREE.EdgesGeometry(baseGeometry));
+    }
+
+    return this.edgeGeometries.get(key) as THREE.EdgesGeometry;
   }
 
   /**
@@ -77,7 +101,7 @@ export class ResourceManager {
    */
   updateMaterialColor(type: 'wall' | 'floor', color: THREE.Color): void {
     this.materials.forEach((material, key) => {
-      if (key.includes(`-${type}-`)) {
+      if (key.endsWith(`-${type}`) || key.includes(`-${type}-`)) {
         (material as THREE.MeshBasicMaterial).color.copy(color);
       }
     });
@@ -88,10 +112,14 @@ export class ResourceManager {
    */
   updateMaterialOpacity(type: 'wall' | 'floor', opacity: number): void {
     this.materials.forEach((material, key) => {
-      if (key.includes(`-${type}-`)) {
+      if (key.endsWith(`-${type}`) || key.includes(`-${type}-`)) {
         const mat = material as THREE.MeshBasicMaterial;
+        const wasTransparent = mat.transparent;
         mat.opacity = opacity;
         mat.transparent = opacity < 1;
+        if (mat.transparent !== wasTransparent) {
+          mat.needsUpdate = true;
+        }
       }
     });
   }
@@ -111,6 +139,18 @@ export class ResourceManager {
       geometry.dispose();
     });
     this.geometries.clear();
+
+    // Dispose edges geometries
+    this.edgeGeometries.forEach(edges => {
+      edges.dispose();
+    });
+    this.edgeGeometries.clear();
+
+    // Dispose edge material
+    if (this.edgeMaterial) {
+      this.edgeMaterial.dispose();
+      this.edgeMaterial = null;
+    }
   }
 
   /**

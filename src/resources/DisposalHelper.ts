@@ -30,11 +30,11 @@ export class DisposalHelper {
    * Dispose a Mesh
    */
   static disposeMesh(mesh: THREE.Mesh): void {
-    if (mesh.geometry) {
+    if (mesh.geometry && !mesh.userData.sharedGeometry) {
       mesh.geometry.dispose();
     }
 
-    if (mesh.material) {
+    if (mesh.material && !mesh.userData.sharedMaterial) {
       this.disposeMaterial(mesh.material);
     }
   }
@@ -43,11 +43,11 @@ export class DisposalHelper {
    * Dispose Line/LineSegments
    */
   static disposeLine(line: THREE.LineSegments | THREE.Line): void {
-    if (line.geometry) {
+    if (line.geometry && !line.userData.sharedGeometry) {
       line.geometry.dispose();
     }
 
-    if (line.material) {
+    if (line.material && !line.userData.sharedMaterial) {
       this.disposeMaterial(line.material);
     }
   }
@@ -94,8 +94,7 @@ export class DisposalHelper {
     group.children.forEach(child => {
       if (child instanceof THREE.LineSegments) {
         edges.push(child);
-        if (child.geometry) child.geometry.dispose();
-        if (child.material) this.disposeMaterial(child.material);
+        this.disposeLine(child);
       }
     });
 

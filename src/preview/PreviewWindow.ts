@@ -35,8 +35,11 @@ export class PreviewWindow {
   constructor(config: PreviewWindowConfig = {}) {
     this.width = config.width ?? 300;
     this.height = config.height ?? 320;
-    this.windowX = config.initialX ?? 60;
-    this.windowY = config.initialY ?? 20;
+    const margin = 20;
+    const defaultX = Math.max(margin, window.innerWidth - this.width - margin);
+    const defaultY = Math.max(margin, window.innerHeight - this.height - margin);
+    this.windowX = config.initialX ?? defaultX;
+    this.windowY = config.initialY ?? defaultY;
 
     // Create container
     this.container = document.createElement('div');

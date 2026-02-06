@@ -8,6 +8,8 @@ export interface GUISettings {
   wallOpacity: number;
   floorOpacity: number;
   showEdges: boolean;
+  showDebug: boolean;
+  showPreview: boolean;
 }
 
 interface GUIConfig {
@@ -49,6 +51,8 @@ export class GUIController {
       wallOpacity: 1.0,
       floorOpacity: 1.0,
       showEdges: true,
+      showDebug: true,
+      showPreview: true,
     };
 
     this.gui = new dat.GUI();
@@ -67,6 +71,8 @@ export class GUIController {
     this.addColorControls();
     this.addOpacityControls();
     this.addEdgeControl();
+    this.addDebugControl();
+    this.addPreviewControl();
   }
 
   /**
@@ -95,6 +101,7 @@ export class GUIController {
       const renderer = this.mazeController.getRenderer();
       if (renderer) {
         renderer.setClearColor(value);
+        this.mazeController.requestRender();
       }
     });
     this.controllers.set('backgroundColor', bgController);
@@ -142,6 +149,28 @@ export class GUIController {
       this.mazeController.toggleEdges(value);
     });
     this.controllers.set('showEdges', edgeController);
+  }
+
+  /**
+   * Add debug overlay toggle
+   */
+  private addDebugControl(): void {
+    const debugController = this.gui.add(this.settings, 'showDebug');
+    debugController.onChange((value: boolean) => {
+      this.mazeController.setDebugOverlayVisible(value);
+    });
+    this.controllers.set('showDebug', debugController);
+  }
+
+  /**
+   * Add preview window toggle
+   */
+  private addPreviewControl(): void {
+    const previewController = this.gui.add(this.settings, 'showPreview');
+    previewController.onChange((value: boolean) => {
+      this.mazeController.setPreviewVisible(value);
+    });
+    this.controllers.set('showPreview', previewController);
   }
 
   /**

@@ -49,6 +49,8 @@ export class MeshFactory {
 
     const wall = new THREE.Mesh(geometry, material);
     wall.position.set(x, y, z);
+    wall.userData.sharedGeometry = true;
+    wall.userData.sharedMaterial = true;
 
     const group = new THREE.Group();
     group.add(wall);
@@ -77,6 +79,8 @@ export class MeshFactory {
     const floor = new THREE.Mesh(geometry, material);
     floor.rotation.x = rotationX;
     floor.position.set(x, y, z);
+    floor.userData.sharedGeometry = true;
+    floor.userData.sharedMaterial = true;
 
     const group = new THREE.Group();
     group.add(floor);
@@ -113,12 +117,15 @@ export class MeshFactory {
     z: number,
     rotationX: number = 0
   ): void {
-    const edges = new THREE.EdgesGeometry(geometry);
+    const edges = this.resourceManager.getEdgesGeometry(geometry);
     const material = this.resourceManager.getEdgeMaterial();
     const line = new THREE.LineSegments(edges, material);
 
     line.position.set(x, y, z);
     line.rotation.x = rotationX;
+    line.renderOrder = 1;
+    line.userData.sharedGeometry = true;
+    line.userData.sharedMaterial = true;
 
     group.add(line);
   }
