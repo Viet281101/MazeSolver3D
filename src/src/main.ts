@@ -15,6 +15,9 @@ export interface MazeController {
   updateWallOpacity(opacity: number): void;
   updateFloorOpacity(opacity: number): void;
   toggleEdges(showEdges: boolean): void;
+  requestRender(): void;
+  setDebugOverlayVisible(visible: boolean): void;
+  setPreviewVisible(visible: boolean): void;
 }
 
 /**
@@ -27,6 +30,13 @@ class MainApp implements MazeController {
   private guiController: GUIController;
   private previewWindow: PreviewWindow;
   private resizeHandler: () => void;
+  private debugOverlay: HTMLDivElement | null = null;
+  private debugIntervalId: number | null = null;
+  private debugStartTime: number = 0;
+  private renderCount: number = 0;
+  private renderListener: () => void;
+  private isDebugOverlayVisible: boolean = true;
+  private isPreviewVisible: boolean = true;
 
   constructor() {
     // Get canvas element
@@ -54,6 +64,15 @@ class MainApp implements MazeController {
       width: 300,
       height: 320,
     });
+
+    // Initialize debug overlay
+    this.renderListener = () => {
+      this.renderCount += 1;
+    };
+    this.maze.addRenderListener(this.renderListener);
+    this.setupDebugOverlay();
+    this.setDebugOverlayVisible(this.isDebugOverlayVisible);
+    this.setPreviewVisible(this.isPreviewVisible);
 
     // Set initial background color
     this.getRenderer().setClearColor(this.guiController.settings.backgroundColor);
@@ -102,8 +121,6 @@ class MainApp implements MazeController {
    * Handle window resize
    */
   private onWindowResize(): void {
-    this.canvas.width = window.innerWidth;
-    this.canvas.height = window.innerHeight;
     this.toolbar.resizeToolbar();
     this.maze.resize();
     this.guiController.checkWindowSize();
@@ -114,6 +131,7 @@ class MainApp implements MazeController {
    */
   public updateMaze(newMaze: number[][][], multiLayer: boolean = false): void {
     // Destroy old maze completely
+    this.maze.removeRenderListener(this.renderListener);
     this.maze.destroy();
 
     // Create new maze
@@ -125,6 +143,9 @@ class MainApp implements MazeController {
 
     // Apply GUI settings to new maze
     this.applyGUISettings();
+
+    // Re-attach render listener for debug overlay
+    this.maze.addRenderListener(this.renderListener);
 
     // Update preview
     this.updatePreview();
@@ -148,6 +169,7 @@ class MainApp implements MazeController {
     const renderer = this.getRenderer();
     if (renderer) {
       renderer.setClearColor(this.guiController.settings.backgroundColor);
+      this.requestRender();
     }
   }
 
@@ -225,6 +247,10 @@ class MainApp implements MazeController {
     this.maze.toggleEdges(showEdges);
   }
 
+  public requestRender(): void {
+    this.maze.requestRender();
+  }
+
   /**
    * Cleanup app on destroyed
    */
@@ -236,6 +262,87 @@ class MainApp implements MazeController {
     this.maze.destroy();
     this.guiController.destroy();
     this.previewWindow.destroy();
+
+    if (this.debugIntervalId !== null) {
+      window.clearInterval(this.debugIntervalId);
+      this.debugIntervalId = null;
+    }
+    if (this.debugOverlay && this.debugOverlay.parentNode) {
+      this.debugOverlay.parentNode.removeChild(this.debugOverlay);
+    }
+  }
+
+  public setDebugOverlayVisible(visible: boolean): void {
+    this.isDebugOverlayVisible = visible;
+    if (this.debugOverlay) {
+      this.debugOverlay.style.display = visible ? 'block' : 'none';
+    }
+  }
+
+  public setPreviewVisible(visible: boolean): void {
+    this.isPreviewVisible = visible;
+    if (visible) {
+      this.previewWindow.show();
+    } else {
+      this.previewWindow.hide();
+    }
+  }
+
+  private setupDebugOverlay(): void {
+    this.debugStartTime = performance.now();
+    this.renderCount = 0;
+
+    const overlay = document.createElement('div');
+    overlay.id = 'debug-overlay';
+    Object.assign(overlay.style, {
+      position: 'fixed',
+      top: '8px',
+      left: '58px',
+      padding: '6px 8px',
+      background: 'rgba(0, 0, 0, 0.6)',
+      color: '#e6e6e6',
+      fontFamily: 'monospace',
+      fontSize: '12px',
+      borderRadius: '4px',
+      zIndex: '2000',
+      pointerEvents: 'none',
+      whiteSpace: 'pre',
+    });
+    document.body.appendChild(overlay);
+    this.debugOverlay = overlay;
+
+    let lastUpdate = performance.now();
+    let lastRenderCount = 0;
+
+    this.debugIntervalId = window.setInterval(() => {
+      const now = performance.now();
+      const elapsed = (now - this.debugStartTime) / 1000;
+      const interval = (now - lastUpdate) / 1000;
+      const renders = this.renderCount - lastRenderCount;
+      const fps = interval > 0 ? renders / interval : 0;
+
+      if (this.debugOverlay) {
+        this.debugOverlay.textContent = `FPS: ${fps.toFixed(1)}\nRuntime: ${this.formatRuntime(elapsed)}`;
+      }
+
+      lastUpdate = now;
+      lastRenderCount = this.renderCount;
+    }, 500);
+  }
+
+  private formatRuntime(secondsTotal: number): string {
+    const totalSeconds = Math.floor(secondsTotal);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    if (hours > 0) {
+      return `${hours}h ${minutes}m ${seconds}s`;
+    }
+    if (minutes > 0) {
+      return `${minutes}m ${seconds}s`;
+    }
+    return `${seconds}s`;
   }
 }
 

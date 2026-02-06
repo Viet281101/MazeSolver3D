@@ -17,6 +17,7 @@ export class PreviewWindow {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
   private closeButton: HTMLButtonElement;
+  private legend: HTMLDivElement;
 
   private isDragging: boolean = false;
   private dragStartX: number = 0;
@@ -35,8 +36,11 @@ export class PreviewWindow {
   constructor(config: PreviewWindowConfig = {}) {
     this.width = config.width ?? 300;
     this.height = config.height ?? 320;
-    this.windowX = config.initialX ?? 60;
-    this.windowY = config.initialY ?? 20;
+    const margin = 20;
+    const defaultX = Math.max(margin, window.innerWidth - this.width - margin);
+    const defaultY = Math.max(margin, window.innerHeight - this.height - margin);
+    this.windowX = config.initialX ?? defaultX;
+    this.windowY = config.initialY ?? defaultY;
 
     // Create container
     this.container = document.createElement('div');
@@ -56,6 +60,13 @@ export class PreviewWindow {
     this.closeButton.className = 'preview-close-btn';
     this.closeButton.innerHTML = '×';
 
+    // Create legend
+    this.legend = document.createElement('div');
+    this.legend.className = 'preview-legend';
+    this.legend.innerHTML =
+      '<span class="preview-legend-item"><i class="preview-swatch wall"></i>Wall</span>' +
+      '<span class="preview-legend-item"><i class="preview-swatch path"></i>Path</span>';
+
     // Create canvas
     this.canvas = document.createElement('canvas');
     this.canvas.className = 'preview-canvas';
@@ -71,6 +82,7 @@ export class PreviewWindow {
     // Assemble window
     this.titleBar.appendChild(this.closeButton);
     this.container.appendChild(this.titleBar);
+    this.container.appendChild(this.legend);
     this.container.appendChild(this.canvas);
     document.body.appendChild(this.container);
 
@@ -173,7 +185,7 @@ export class PreviewWindow {
     for (let row = 0; row < rows; row++) {
       for (let col = 0; col < cols; col++) {
         const x = offsetX + col * cellSize;
-        const y = offsetY + row * cellSize;
+        const y = offsetY + (rows - 1 - row) * cellSize;
 
         if (this.mazeData[row][col] === 1) {
           // Wall - dark gray

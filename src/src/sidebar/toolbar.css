@@ -1,0 +1,41 @@
+.toolbar-canvas {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 999;
+}
+
+.toolbar-popup {
+  position: absolute;
+  top: var(--toolbar-popup-top, 0);
+  left: var(--toolbar-popup-left, 238px);
+  transform: translateX(-50%);
+  width: 370px;
+  height: 100%;
+  border: 3px solid #000;
+  background-color: #a0a0a0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  z-index: 1000;
+}
+
+.toolbar-popup__title {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1001;
+  font-size: 22px;
+  color: #00ffaa;
+  background-color: rgba(0, 0, 0, 0);
+}
+
+.toolbar-popup__close {
+  position: fixed;
+  top: var(--toolbar-close-top, 10px);
+  left: var(--toolbar-close-left, 400px);
+  cursor: pointer;
+  z-index: 1001;
+  transform: translateX(-50%);
+  background-color: rgba(0, 0, 0, 0);
+}

@@ -44,7 +44,10 @@ export abstract class Maze {
 
   // Animation control
   private animationId: number | null = null;
+  private needsRender: boolean = true;
+  private isRendering: boolean = false;
   private isDisposed: boolean = false;
+  private renderListeners: Set<() => void> = new Set();
 
   constructor(canvas: HTMLCanvasElement, maze: number[][][], config: MazeConfig = {}) {
     this.canvas = canvas;
@@ -73,6 +76,7 @@ export abstract class Maze {
     this.renderer = new THREE.WebGLRenderer({
       canvas: this.canvas,
       antialias: true,
+      powerPreference: 'high-performance',
     });
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
 
@@ -94,15 +98,17 @@ export abstract class Maze {
    * Initialize renderer and start animation loop
    */
   protected init(): void {
-    this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.renderer.setPixelRatio(window.devicePixelRatio);
+    const { width, height, pixelRatio } = this.getRendererSize();
+    this.renderer.setPixelRatio(pixelRatio);
+    this.renderer.setSize(width, height);
 
     // Configure controls
     this.controls.enableDamping = true;
     this.controls.dampingFactor = 0.05;
+    this.controls.addEventListener('change', () => this.requestRender());
 
     this.createMaze();
-    this.startAnimation();
+    this.requestRender();
   }
 
   /**
@@ -114,26 +120,41 @@ export abstract class Maze {
    * Position camera to view entire maze
    */
   protected positionCamera(centerX: number, centerZ: number, distance: number): void {
-    this.camera.position.set(centerX, 5, distance);
+    this.camera.position.set(centerX, 10, distance);
     this.controls.target.set(centerX, 0, centerZ);
     this.controls.update();
   }
 
   /**
-   * Start animation loop
+   * Request a render on the next animation frame
    */
-  private startAnimation(): void {
+  public requestRender(): void {
     if (this.isDisposed) return;
+    this.needsRender = true;
+    if (this.isRendering) return;
 
-    const animate = () => {
-      if (this.isDisposed) return;
+    this.isRendering = true;
+    this.animationId = requestAnimationFrame(() => {
+      if (this.isDisposed) {
+        this.isRendering = false;
+        return;
+      }
 
-      this.animationId = requestAnimationFrame(animate);
-      this.controls.update();
+      if (!this.needsRender) {
+        this.isRendering = false;
+        return;
+      }
+
+      this.needsRender = false;
+      const needsMore = this.controls.update();
       this.renderer.render(this.scene, this.camera);
-    };
+      this.renderListeners.forEach(listener => listener());
+      this.isRendering = false;
 
-    animate();
+      if (needsMore || this.needsRender) {
+        this.requestRender();
+      }
+    });
   }
 
   /**
@@ -154,7 +175,10 @@ export abstract class Maze {
 
     this.camera.aspect = window.innerWidth / window.innerHeight;
     this.camera.updateProjectionMatrix();
-    this.renderer.setSize(window.innerWidth, window.innerHeight);
+    const { width, height, pixelRatio } = this.getRendererSize();
+    this.renderer.setPixelRatio(pixelRatio);
+    this.renderer.setSize(width, height);
+    this.requestRender();
   }
 
   /**
@@ -205,24 +229,28 @@ export abstract class Maze {
     this.wallColor.set(color);
     this.resourceManager.updateMaterialColor('wall', this.wallColor);
     this.meshFactory.updateSettings({ wallColor: this.wallColor });
+    this.requestRender();
   }
 
   public updateFloorColor(color: string): void {
     this.floorColor.set(color);
     this.resourceManager.updateMaterialColor('floor', this.floorColor);
     this.meshFactory.updateSettings({ floorColor: this.floorColor });
+    this.requestRender();
   }
 
   public updateWallOpacity(opacity: number): void {
     this.wallOpacity = opacity;
     this.resourceManager.updateMaterialOpacity('wall', opacity);
     this.meshFactory.updateSettings({ wallOpacity: opacity });
+    this.requestRender();
   }
 
   public updateFloorOpacity(opacity: number): void {
     this.floorOpacity = opacity;
     this.resourceManager.updateMaterialOpacity('floor', opacity);
     this.meshFactory.updateSettings({ floorOpacity: opacity });
+    this.requestRender();
   }
 
   public toggleEdges(showEdges: boolean): void {
@@ -231,6 +259,15 @@ export abstract class Maze {
     this.showEdges = showEdges;
     this.meshFactory.updateSettings({ showEdges });
     this.rebuildEdges();
+    this.requestRender();
+  }
+
+  public addRenderListener(listener: () => void): void {
+    this.renderListeners.add(listener);
+  }
+
+  public removeRenderListener(listener: () => void): void {
+    this.renderListeners.delete(listener);
   }
 
   /**
@@ -261,5 +298,16 @@ export abstract class Maze {
         }
       });
     });
+
+    this.requestRender();
+  }
+
+  private getRendererSize(): { width: number; height: number; pixelRatio: number } {
+    const pixelRatio = Math.min(window.devicePixelRatio, 1.5);
+    const maxSize = this.renderer.capabilities.maxTextureSize;
+    const maxDimension = Math.floor(maxSize / pixelRatio);
+    const width = Math.min(window.innerWidth, maxDimension);
+    const height = Math.min(window.innerHeight, maxDimension);
+    return { width, height, pixelRatio };
   }
 }

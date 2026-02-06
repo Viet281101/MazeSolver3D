@@ -2,6 +2,7 @@ import { showSolvePopup } from './popup/solve';
 import { showSettingsPopup } from './popup/setting';
 import { showTutorialPopup } from './popup/tutorial';
 import { showMazePopup } from './popup/maze';
+import './toolbar.css';
 
 interface ToolButton {
   name: string;
@@ -57,11 +58,7 @@ export class Toolbar {
       this.ctx = this.canvas.getContext('2d', {
         alpha: false,
       }) as CanvasRenderingContext2D;
-
-      this.canvas.style.position = 'absolute';
-      this.canvas.style.left = '0';
-      this.canvas.style.top = '0';
-      this.canvas.style.zIndex = '999';
+      this.canvas.className = 'toolbar-canvas';
       document.body.appendChild(this.canvas);
     }
 
@@ -349,19 +346,9 @@ export class Toolbar {
   public createPopupContainer(id: string, title: string): HTMLElement {
     const popupContainer = document.createElement('div');
     popupContainer.id = id;
-    popupContainer.style.cssText = `
-      position: absolute;
-      top: ${this.isMobile ? '50px' : '0'};
-      left: ${this.isMobile ? '50%' : '238px'};
-      transform: translateX(-50%);
-      width: 370px;
-      height: 100%;
-      border: 3px solid #000;
-      background-color: #a0a0a0;
-      overflow-y: auto;
-      overflow-x: hidden;
-      z-index: 1000;
-    `;
+    popupContainer.className = 'toolbar-popup';
+    popupContainer.style.setProperty('--toolbar-popup-top', this.isMobile ? '50px' : '0');
+    popupContainer.style.setProperty('--toolbar-popup-left', this.isMobile ? '50%' : '238px');
     document.body.appendChild(popupContainer);
 
     const popup = document.createElement('canvas');
@@ -370,16 +357,7 @@ export class Toolbar {
     popupContainer.appendChild(popup);
 
     const titleElement = document.createElement('h3');
-    titleElement.style.cssText = `
-      position: absolute;
-      top: -10px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 1001;
-      font-size: 22px;
-      color: #00ffaa;
-      background-color: rgba(0, 0, 0, 0);
-    `;
+    titleElement.className = 'toolbar-popup__title';
     titleElement.textContent = title;
     popupContainer.appendChild(titleElement);
 
@@ -395,15 +373,12 @@ export class Toolbar {
 
     const closeIcon = new Image();
     closeIcon.src = '/MazeSolver3D/icon/close.png';
-    closeIcon.style.cssText = `
-      position: fixed;
-      top: ${this.isMobile ? '56px' : '10px'};
-      left: ${this.isMobile ? 'calc(50% + 162px)' : '400px'};
-      cursor: pointer;
-      z-index: 1001;
-      transform: translateX(-50%);
-      background-color: rgba(0, 0, 0, 0);
-    `;
+    closeIcon.className = 'toolbar-popup__close';
+    closeIcon.style.setProperty('--toolbar-close-top', this.isMobile ? '56px' : '10px');
+    closeIcon.style.setProperty(
+      '--toolbar-close-left',
+      this.isMobile ? 'calc(50% + 162px)' : '400px'
+    );
     closeIcon.addEventListener('click', () => this.closeCurrentPopup());
     document.body.appendChild(closeIcon);
     this.currentCloseIcon = closeIcon;
