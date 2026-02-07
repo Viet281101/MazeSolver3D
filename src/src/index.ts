@@ -19,4 +19,4 @@ export { GUIController } from './gui';
 export type { GUISettings } from './gui';
 
 // Main controller
-export type { MazeController } from './main';
+export type { MazeController } from './maze/MazeController';
