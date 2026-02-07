@@ -37,6 +37,7 @@ class MainApp implements MazeController {
   private renderListener: () => void;
   private isDebugOverlayVisible: boolean = true;
   private isPreviewVisible: boolean = true;
+  private readonly mobileBreakpoint: number = 800;
 
   constructor() {
     // Get canvas element
@@ -54,9 +55,15 @@ class MainApp implements MazeController {
     // Initialize GUI
     this.guiController = new GUIController(this, {
       scale: 1.4,
-      mobileBreakpoint: 800,
+      mobileBreakpoint: this.mobileBreakpoint,
       autoHide: true,
     });
+
+    const isMobile = window.innerWidth <= this.mobileBreakpoint;
+    this.isDebugOverlayVisible = !isMobile;
+    this.isPreviewVisible = !isMobile;
+    this.guiController.updateSetting('showDebug', this.isDebugOverlayVisible);
+    this.guiController.updateSetting('showPreview', this.isPreviewVisible);
 
     // Initialize preview window
     this.previewWindow = new PreviewWindow({

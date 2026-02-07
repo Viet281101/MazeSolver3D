@@ -10,8 +10,19 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+.vite
 deploy.md
 *.local
+*.tsbuildinfo
+
+# Env files
+.env
+.env.*.local
+.env.local
+!.env.example
+
+# Test / coverage
+coverage
 
 # Editor directories and files
 .vscode/*
@@ -23,3 +34,7 @@ deploy.md
 *.njsproj
 *.sln
 *.sw?
+
+# Optional tooling caches
+.eslintcache
+.stylelintcache
