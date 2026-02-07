@@ -240,6 +240,20 @@ export class PreviewWindow {
   }
 
   /**
+   * Re-clamp window position on viewport resize
+   */
+  public handleWindowResize(): void {
+    const maxX = Math.max(0, window.innerWidth - this.width);
+    const maxY = Math.max(0, window.innerHeight - this.height);
+
+    this.windowX = Math.max(0, Math.min(this.windowX, maxX));
+    this.windowY = Math.max(0, Math.min(this.windowY, maxY));
+
+    this.container.style.left = `${this.windowX}px`;
+    this.container.style.top = `${this.windowY}px`;
+  }
+
+  /**
    * Destroy the preview window
    */
   public destroy(): void {

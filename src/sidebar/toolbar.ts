@@ -59,6 +59,9 @@ export class Toolbar {
         alpha: false,
       }) as CanvasRenderingContext2D;
       this.canvas.className = 'toolbar-canvas';
+    }
+
+    if (!this.canvas.parentNode) {
       document.body.appendChild(this.canvas);
     }
 

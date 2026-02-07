@@ -1,5 +1,5 @@
 import * as dat from 'dat.gui';
-import { MazeController } from './main';
+import { MazeController } from './maze/MazeController';
 
 export interface GUISettings {
   backgroundColor: string;
