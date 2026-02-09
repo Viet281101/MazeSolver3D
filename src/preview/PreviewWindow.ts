@@ -113,14 +113,14 @@ export class PreviewWindow {
     // Create close button
     this.closeButton = document.createElement('button');
     this.closeButton.className = 'preview-close-btn';
-    this.closeButton.innerHTML = '×';
+    this.closeButton.textContent = 'x';
 
     // Create hide button
     this.hideButton = document.createElement('button');
     this.hideButton.className = 'preview-hide-btn';
     this.hideButton.type = 'button';
     this.hideButton.setAttribute('title', 'Hide preview');
-    this.hideButton.textContent = '–';
+    this.hideButton.textContent = '-';
 
     // Create grid toggle button
     this.gridToggleButton = document.createElement('button');
