@@ -38,7 +38,6 @@ class MazePopup {
 
   private createBtn: HTMLButtonElement;
   private clearBtn: HTMLButtonElement;
-  private resetBtn: HTMLButtonElement;
   private applyBtn: HTMLButtonElement;
 
   private onMouseDown: (e: MouseEvent) => void;
@@ -73,12 +72,12 @@ class MazePopup {
 
     const ui = this.buildControls();
     this.popupContainer.insertBefore(ui.controls, this.canvas);
+    this.popupContainer.insertBefore(ui.applySection, this.canvas.nextSibling);
     this.rowsInput = ui.rowsInput;
     this.colsInput = ui.colsInput;
     this.toolButtons = ui.toolButtons;
     this.createBtn = ui.createBtn;
     this.clearBtn = ui.clearBtn;
-    this.resetBtn = ui.resetBtn;
     this.applyBtn = ui.applyBtn;
 
     this.state = {
@@ -144,24 +143,23 @@ class MazePopup {
     actionSection.className = 'maze-popup__section';
 
     const clearBtn = createButton('Clear', 'maze-popup__btn');
-    const resetBtn = createButton('Reset', 'maze-popup__btn');
-    const applyBtn = createButton('Apply', 'maze-popup__btn maze-popup__btn--primary');
-
     actionSection.appendChild(clearBtn);
-    actionSection.appendChild(resetBtn);
-    actionSection.appendChild(applyBtn);
+
+    const applySection = document.createElement('div');
+    applySection.className = 'maze-popup__section maze-popup__section--apply';
+    const applyBtn = createButton('Apply', 'maze-popup__btn maze-popup__btn--primary');
+    applySection.appendChild(applyBtn);
 
     controls.appendChild(sizeSection);
     controls.appendChild(toolSection);
     controls.appendChild(actionSection);
-
     return {
       controls,
+      applySection,
       rowsInput: rowsInput.input,
       colsInput: colsInput.input,
       createBtn,
       clearBtn,
-      resetBtn,
       applyBtn,
       toolButtons: {
         pen: penBtn,
@@ -175,7 +173,6 @@ class MazePopup {
   private bindEvents() {
     this.createBtn.addEventListener('click', () => this.handleCreate());
     this.clearBtn.addEventListener('click', () => this.handleClear());
-    this.resetBtn.addEventListener('click', () => this.handleReset());
     this.applyBtn.addEventListener('click', () => this.handleApply());
 
     this.toolButtons.pen.addEventListener('click', () => this.setTool('pen'));
@@ -230,7 +227,7 @@ class MazePopup {
 
   private draw() {
     this.ctx.setTransform(1, 0, 0, 1, 0, 0);
-    this.ctx.fillStyle = '#1f1f1f';
+    this.ctx.fillStyle = '#33566b';
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
     this.ctx.save();
@@ -355,10 +352,6 @@ class MazePopup {
     this.state.start = null;
     this.state.end = null;
     this.draw();
-  }
-
-  private handleReset() {
-    this.rebuild(this.state.rows, this.state.cols);
   }
 
   private handleApply() {

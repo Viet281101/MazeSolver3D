@@ -73,21 +73,29 @@
   align-items: center;
 }
 
+.maze-popup__section--apply {
+  justify-content: center;
+  position: relative;
+  top: 70px;
+}
+
 .maze-popup__input {
   display: flex;
   align-items: center;
   gap: 6px;
   color: #eaeaea;
-  font-size: 12px;
+  font-size: 20px;
 }
 
 .maze-popup__input input {
   width: 64px;
+  height: 36px;
   background: #111;
   color: #fff;
   border: 1px solid #333;
   padding: 4px 6px;
   border-radius: 4px;
+  font-size: 16px;
 }
 
 .maze-popup__btn,
@@ -95,10 +103,10 @@
   background: #1a1a1a;
   color: #eaeaea;
   border: 1px solid #2b2b2b;
-  padding: 6px 10px;
+  padding: 10px 20px;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 16px;
 }
 
 .maze-popup__tool.is-active {
@@ -119,7 +127,7 @@
   width: 330px;
   height: 330px;
   border: 1px solid #000;
-  background: #1f1f1f;
+  background: #33566b;
   cursor: crosshair;
   touch-action: none;
 }

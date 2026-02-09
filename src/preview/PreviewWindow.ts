@@ -256,7 +256,10 @@ export class PreviewWindow {
    */
   public updateMaze(
     mazeData: number[][],
-    markers?: { start?: { row: number; col: number } | null; end?: { row: number; col: number } | null }
+    markers?: {
+      start?: { row: number; col: number } | null;
+      end?: { row: number; col: number } | null;
+    }
   ): void {
     this.mazeData = mazeData;
     if (markers) {
@@ -327,15 +330,7 @@ export class PreviewWindow {
       this.startCell.col === this.endCell.col;
 
     if (hasSameCell && this.startCell) {
-      this.drawMarker(
-        this.startCell,
-        rows,
-        cellSize,
-        offsetX,
-        offsetY,
-        PREVIEW_COLORS.markerBoth,
-        'S/E'
-      );
+      this.drawMarker(this.startCell, rows, cellSize, offsetX, offsetY, PREVIEW_COLORS.markerBoth);
     } else {
       if (this.startCell) {
         this.drawMarker(
@@ -344,20 +339,11 @@ export class PreviewWindow {
           cellSize,
           offsetX,
           offsetY,
-          PREVIEW_COLORS.markerStart,
-          'S'
+          PREVIEW_COLORS.markerStart
         );
       }
       if (this.endCell) {
-        this.drawMarker(
-          this.endCell,
-          rows,
-          cellSize,
-          offsetX,
-          offsetY,
-          PREVIEW_COLORS.markerEnd,
-          'E'
-        );
+        this.drawMarker(this.endCell, rows, cellSize, offsetX, offsetY, PREVIEW_COLORS.markerEnd);
       }
     }
   }
@@ -428,29 +414,13 @@ export class PreviewWindow {
     cellSize: number,
     offsetX: number,
     offsetY: number,
-    color: string,
-    label: string
+    color: string
   ): void {
     const x = offsetX + cell.col * cellSize;
     const y = offsetY + (rows - 1 - cell.row) * cellSize;
-    const centerX = x + cellSize / 2;
-    const centerY = y + cellSize / 2;
-    const radius = Math.max(4, cellSize * 0.35);
 
-    this.ctx.beginPath();
     this.ctx.fillStyle = color;
-    this.ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-    this.ctx.fill();
-
-    this.ctx.lineWidth = Math.max(1, cellSize * 0.08);
-    this.ctx.strokeStyle = PREVIEW_COLORS.markerStroke;
-    this.ctx.stroke();
-
-    this.ctx.fillStyle = PREVIEW_COLORS.markerText;
-    this.ctx.font = `bold ${Math.max(8, cellSize * 0.45)}px Arial`;
-    this.ctx.textAlign = 'center';
-    this.ctx.textBaseline = 'middle';
-    this.ctx.fillText(label, centerX, centerY + 0.5);
+    this.ctx.fillRect(x, y, cellSize, cellSize);
   }
 
   /**

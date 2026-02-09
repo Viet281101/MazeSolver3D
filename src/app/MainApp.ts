@@ -150,22 +150,29 @@ export class MainApp implements MazeController {
     multiLayer: boolean = false,
     markers?: { start?: { row: number; col: number } | null; end?: { row: number; col: number } | null }
   ): void {
-    // Destroy old maze completely
-    this.maze.removeRenderListener(this.renderListener);
-    this.maze.destroy();
+    const canReuseSingle = !multiLayer && this.maze instanceof SingleLayerMaze;
+    const canReuseMulti = multiLayer && this.maze instanceof MultiLayerMaze;
 
-    // Create new maze
-    if (multiLayer) {
-      this.maze = new MultiLayerMaze(this.canvas, newMaze);
+    if (canReuseSingle || canReuseMulti) {
+      this.maze.updateMazeData(newMaze);
     } else {
-      this.maze = new SingleLayerMaze(this.canvas, newMaze);
+      // Destroy old maze completely
+      this.maze.removeRenderListener(this.renderListener);
+      this.maze.destroy();
+
+      // Create new maze
+      if (multiLayer) {
+        this.maze = new MultiLayerMaze(this.canvas, newMaze);
+      } else {
+        this.maze = new SingleLayerMaze(this.canvas, newMaze);
+      }
+
+      // Apply GUI settings to new maze
+      this.applyGUISettings();
+
+      // Re-attach render listener for debug overlay
+      this.maze.addRenderListener(this.renderListener);
     }
-
-    // Apply GUI settings to new maze
-    this.applyGUISettings();
-
-    // Re-attach render listener for debug overlay
-    this.maze.addRenderListener(this.renderListener);
 
     this.previewMarkers = markers ? { start: markers.start ?? null, end: markers.end ?? null } : null;
 

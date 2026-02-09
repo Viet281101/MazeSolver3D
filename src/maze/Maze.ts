@@ -117,6 +117,16 @@ export abstract class Maze {
   protected abstract createMaze(): void;
 
   /**
+   * Update maze data and rebuild geometry without recreating renderer/controls
+   */
+  public updateMazeData(maze: number[][][]): void {
+    if (this.isDisposed) return;
+    this.maze = maze;
+    this.createMaze();
+    this.requestRender();
+  }
+
+  /**
    * Position camera to view entire maze
    */
   protected positionCamera(centerX: number, centerZ: number, distance: number): void {
