@@ -22,6 +22,9 @@ export class MainApp implements MazeController {
   private readonly debugUpdateIntervalMs: number = 250;
   private renderCount: number = 0;
   private renderListener: () => void;
+  private previewMarkers:
+    | { start: { row: number; col: number } | null; end: { row: number; col: number } | null }
+    | null = null;
   private isDebugOverlayVisible: boolean = true;
   private isPreviewVisible: boolean = true;
   private isPreviewClosed: boolean = false;
@@ -142,7 +145,11 @@ export class MainApp implements MazeController {
   /**
    * Update maze with new data
    */
-  public updateMaze(newMaze: number[][][], multiLayer: boolean = false): void {
+  public updateMaze(
+    newMaze: number[][][],
+    multiLayer: boolean = false,
+    markers?: { start?: { row: number; col: number } | null; end?: { row: number; col: number } | null }
+  ): void {
     // Destroy old maze completely
     this.maze.removeRenderListener(this.renderListener);
     this.maze.destroy();
@@ -160,6 +167,8 @@ export class MainApp implements MazeController {
     // Re-attach render listener for debug overlay
     this.maze.addRenderListener(this.renderListener);
 
+    this.previewMarkers = markers ? { start: markers.start ?? null, end: markers.end ?? null } : null;
+
     // Update preview
     this.updatePreview();
   }
@@ -171,7 +180,11 @@ export class MainApp implements MazeController {
     // Get first layer of maze for 2D preview
     const mazeData = this.maze['maze'];
     if (mazeData && mazeData.length > 0) {
-      this.previewWindow?.updateMaze(mazeData[0]);
+      if (this.previewMarkers) {
+        this.previewWindow?.updateMaze(mazeData[0], this.previewMarkers);
+      } else {
+        this.previewWindow?.updateMaze(mazeData[0]);
+      }
     }
   }
 

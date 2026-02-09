@@ -26,110 +26,183 @@ interface MazePopupState {
   lastY: number;
 }
 
-/**
- * Show maze popup - Custom maze editor
- */
-export function showMazePopup(toolbar: Toolbar): void {
-  const popupContainer = toolbar.createPopupContainer('mazePopup', 'Custom Maze');
-  popupContainer.classList.add('maze-popup');
+class MazePopup {
+  private toolbar: Toolbar;
+  private popupContainer: HTMLElement;
+  private canvas: HTMLCanvasElement;
+  private ctx: CanvasRenderingContext2D;
+  private state: MazePopupState;
+  private rowsInput: HTMLInputElement;
+  private colsInput: HTMLInputElement;
+  private toolButtons: Record<ToolMode, HTMLButtonElement>;
 
-  const canvas = popupContainer.querySelector('canvas') as HTMLCanvasElement;
-  const ctx = canvas.getContext('2d', {
-    alpha: false,
-    desynchronized: true,
-  });
+  private createBtn: HTMLButtonElement;
+  private clearBtn: HTMLButtonElement;
+  private resetBtn: HTMLButtonElement;
+  private applyBtn: HTMLButtonElement;
 
-  if (!ctx) {
-    console.error('Failed to get 2D context for maze popup');
-    return;
+  private onMouseDown: (e: MouseEvent) => void;
+  private onMouseMove: (e: MouseEvent) => void;
+  private onMouseUp: () => void;
+  private onMouseLeave: () => void;
+  private onWheel: (e: WheelEvent) => void;
+  private onContextMenu: (e: MouseEvent) => void;
+
+  constructor(toolbar: Toolbar) {
+    this.toolbar = toolbar;
+    this.popupContainer = this.toolbar.createPopupContainer('mazePopup', 'Custom Maze');
+    this.popupContainer.classList.add('maze-popup');
+
+    const canvas = this.popupContainer.querySelector('canvas') as HTMLCanvasElement | null;
+    if (!canvas) {
+      throw new Error('Maze popup canvas not found');
+    }
+    const ctx = canvas.getContext('2d', {
+      alpha: false,
+      desynchronized: true,
+    });
+    if (!ctx) {
+      throw new Error('Failed to get 2D context for maze popup');
+    }
+
+    this.canvas = canvas;
+    this.ctx = ctx;
+    this.canvas.classList.add('maze-popup__canvas');
+    this.canvas.width = 330;
+    this.canvas.height = 330;
+
+    const ui = this.buildControls();
+    this.popupContainer.insertBefore(ui.controls, this.canvas);
+    this.rowsInput = ui.rowsInput;
+    this.colsInput = ui.colsInput;
+    this.toolButtons = ui.toolButtons;
+    this.createBtn = ui.createBtn;
+    this.clearBtn = ui.clearBtn;
+    this.resetBtn = ui.resetBtn;
+    this.applyBtn = ui.applyBtn;
+
+    this.state = {
+      rows: this.rowsInput.valueAsNumber,
+      cols: this.colsInput.valueAsNumber,
+      grid: [],
+      start: null,
+      end: null,
+      tool: 'pen',
+      cellSize: 22,
+      scale: 1,
+      minScale: 0.35,
+      maxScale: 6,
+      offsetX: 0,
+      offsetY: 0,
+      isPanning: false,
+      isDrawing: false,
+      lastX: 0,
+      lastY: 0,
+    };
+
+    this.onMouseDown = e => this.handleMouseDown(e);
+    this.onMouseMove = e => this.handleMouseMove(e);
+    this.onMouseUp = () => this.handleMouseUp();
+    this.onMouseLeave = () => this.handleMouseLeave();
+    this.onWheel = e => this.handleWheel(e);
+    this.onContextMenu = e => e.preventDefault();
+
+    this.bindEvents();
+    this.setTool('pen');
+    this.rebuild(this.state.rows, this.state.cols);
   }
 
-  canvas.classList.add('maze-popup__canvas');
-  canvas.width = 330;
-  canvas.height = 330;
+  private buildControls() {
+    const controls = document.createElement('div');
+    controls.className = 'maze-popup__controls';
 
-  const controls = document.createElement('div');
-  controls.className = 'maze-popup__controls';
+    const sizeSection = document.createElement('div');
+    sizeSection.className = 'maze-popup__section';
 
-  const sizeSection = document.createElement('div');
-  sizeSection.className = 'maze-popup__section';
+    const rowsInput = createNumberInput('Rows', 5, 80, 12);
+    const colsInput = createNumberInput('Cols', 5, 80, 12);
+    const createBtn = createButton('Create', 'maze-popup__btn');
 
-  const rowsInput = createNumberInput('Rows', 5, 80, 12);
-  const colsInput = createNumberInput('Cols', 5, 80, 12);
+    sizeSection.appendChild(rowsInput.wrapper);
+    sizeSection.appendChild(colsInput.wrapper);
+    sizeSection.appendChild(createBtn);
 
-  const createBtn = createButton('Create', 'maze-popup__btn');
+    const toolSection = document.createElement('div');
+    toolSection.className = 'maze-popup__section';
 
-  sizeSection.appendChild(rowsInput.wrapper);
-  sizeSection.appendChild(colsInput.wrapper);
-  sizeSection.appendChild(createBtn);
+    const penBtn = createButton('Pen', 'maze-popup__tool');
+    const eraserBtn = createButton('Eraser', 'maze-popup__tool');
+    const startBtn = createButton('Start', 'maze-popup__tool');
+    const endBtn = createButton('End', 'maze-popup__tool');
 
-  const toolSection = document.createElement('div');
-  toolSection.className = 'maze-popup__section';
+    toolSection.appendChild(penBtn);
+    toolSection.appendChild(eraserBtn);
+    toolSection.appendChild(startBtn);
+    toolSection.appendChild(endBtn);
 
-  const penBtn = createButton('Pen', 'maze-popup__tool');
-  const eraserBtn = createButton('Eraser', 'maze-popup__tool');
-  const startBtn = createButton('Start', 'maze-popup__tool');
-  const endBtn = createButton('End', 'maze-popup__tool');
+    const actionSection = document.createElement('div');
+    actionSection.className = 'maze-popup__section';
 
-  toolSection.appendChild(penBtn);
-  toolSection.appendChild(eraserBtn);
-  toolSection.appendChild(startBtn);
-  toolSection.appendChild(endBtn);
+    const clearBtn = createButton('Clear', 'maze-popup__btn');
+    const resetBtn = createButton('Reset', 'maze-popup__btn');
+    const applyBtn = createButton('Apply', 'maze-popup__btn maze-popup__btn--primary');
 
-  const actionSection = document.createElement('div');
-  actionSection.className = 'maze-popup__section';
+    actionSection.appendChild(clearBtn);
+    actionSection.appendChild(resetBtn);
+    actionSection.appendChild(applyBtn);
 
-  const clearBtn = createButton('Clear', 'maze-popup__btn');
-  const resetBtn = createButton('Reset', 'maze-popup__btn');
-  const applyBtn = createButton('Apply', 'maze-popup__btn maze-popup__btn--primary');
+    controls.appendChild(sizeSection);
+    controls.appendChild(toolSection);
+    controls.appendChild(actionSection);
 
-  actionSection.appendChild(clearBtn);
-  actionSection.appendChild(resetBtn);
-  actionSection.appendChild(applyBtn);
+    return {
+      controls,
+      rowsInput: rowsInput.input,
+      colsInput: colsInput.input,
+      createBtn,
+      clearBtn,
+      resetBtn,
+      applyBtn,
+      toolButtons: {
+        pen: penBtn,
+        eraser: eraserBtn,
+        start: startBtn,
+        end: endBtn,
+      } as Record<ToolMode, HTMLButtonElement>,
+    };
+  }
 
-  controls.appendChild(sizeSection);
-  controls.appendChild(toolSection);
-  controls.appendChild(actionSection);
-  popupContainer.insertBefore(controls, canvas);
+  private bindEvents() {
+    this.createBtn.addEventListener('click', () => this.handleCreate());
+    this.clearBtn.addEventListener('click', () => this.handleClear());
+    this.resetBtn.addEventListener('click', () => this.handleReset());
+    this.applyBtn.addEventListener('click', () => this.handleApply());
 
-  const state: MazePopupState = {
-    rows: rowsInput.input.valueAsNumber,
-    cols: colsInput.input.valueAsNumber,
-    grid: [],
-    start: null,
-    end: null,
-    tool: 'pen',
-    cellSize: 22,
-    scale: 1,
-    minScale: 0.35,
-    maxScale: 6,
-    offsetX: 0,
-    offsetY: 0,
-    isPanning: false,
-    isDrawing: false,
-    lastX: 0,
-    lastY: 0,
-  };
+    this.toolButtons.pen.addEventListener('click', () => this.setTool('pen'));
+    this.toolButtons.eraser.addEventListener('click', () => this.setTool('eraser'));
+    this.toolButtons.start.addEventListener('click', () => this.setTool('start'));
+    this.toolButtons.end.addEventListener('click', () => this.setTool('end'));
 
-  const toolButtons: Record<ToolMode, HTMLButtonElement> = {
-    pen: penBtn,
-    eraser: eraserBtn,
-    start: startBtn,
-    end: endBtn,
-  };
+    this.canvas.addEventListener('contextmenu', this.onContextMenu);
+    this.canvas.addEventListener('mousedown', this.onMouseDown);
+    this.canvas.addEventListener('mousemove', this.onMouseMove);
+    this.canvas.addEventListener('mouseup', this.onMouseUp);
+    this.canvas.addEventListener('mouseleave', this.onMouseLeave);
+    this.canvas.addEventListener('wheel', this.onWheel, { passive: false });
+  }
 
-  const setTool = (tool: ToolMode) => {
-    state.tool = tool;
-    Object.entries(toolButtons).forEach(([key, btn]) => {
+  private setTool(tool: ToolMode) {
+    this.state.tool = tool;
+    Object.entries(this.toolButtons).forEach(([key, btn]) => {
       if (key === tool) {
         btn.classList.add('is-active');
       } else {
         btn.classList.remove('is-active');
       }
     });
-  };
+  }
 
-  const initGrid = (rows: number, cols: number) => {
+  private initGrid(rows: number, cols: number) {
     const grid: number[][] = [];
     for (let r = 0; r < rows; r += 1) {
       const row: number[] = [];
@@ -140,232 +213,244 @@ export function showMazePopup(toolbar: Toolbar): void {
       grid.push(row);
     }
     return grid;
-  };
+  }
 
-  const resetView = () => {
-    const gridWidth = state.cols * state.cellSize;
-    const gridHeight = state.rows * state.cellSize;
+  private resetView() {
+    const gridWidth = this.state.cols * this.state.cellSize;
+    const gridHeight = this.state.rows * this.state.cellSize;
     const scale = 1;
-    state.scale = scale;
-    state.offsetX = (canvas.width - gridWidth * scale) / 2;
-    state.offsetY = (canvas.height - gridHeight * scale) / 2;
-  };
+    this.state.scale = scale;
+    this.state.offsetX = (this.canvas.width - gridWidth * scale) / 2;
+    this.state.offsetY = (this.canvas.height - gridHeight * scale) / 2;
+  }
 
-  const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
+  private clamp(value: number, min: number, max: number) {
+    return Math.max(min, Math.min(max, value));
+  }
 
-  const draw = () => {
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.fillStyle = '#1f1f1f';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  private draw() {
+    this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+    this.ctx.fillStyle = '#1f1f1f';
+    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-    ctx.save();
-    ctx.translate(state.offsetX, state.offsetY);
-    ctx.scale(state.scale, state.scale);
+    this.ctx.save();
+    this.ctx.translate(this.state.offsetX, this.state.offsetY);
+    this.ctx.scale(this.state.scale, this.state.scale);
 
-    const gridWidth = state.cols * state.cellSize;
-    const gridHeight = state.rows * state.cellSize;
+    const gridWidth = this.state.cols * this.state.cellSize;
+    const gridHeight = this.state.rows * this.state.cellSize;
 
-    ctx.fillStyle = '#e6e6e6';
-    ctx.fillRect(0, 0, gridWidth, gridHeight);
+    this.ctx.fillStyle = '#e6e6e6';
+    this.ctx.fillRect(0, 0, gridWidth, gridHeight);
 
-    ctx.fillStyle = '#333';
-    for (let r = 0; r < state.rows; r += 1) {
-      for (let c = 0; c < state.cols; c += 1) {
-        if (state.grid[r][c] === 1) {
-          ctx.fillRect(
-            c * state.cellSize,
-            r * state.cellSize,
-            state.cellSize,
-            state.cellSize
+    this.ctx.fillStyle = '#333';
+    for (let r = 0; r < this.state.rows; r += 1) {
+      for (let c = 0; c < this.state.cols; c += 1) {
+        if (this.state.grid[r][c] === 1) {
+          this.ctx.fillRect(
+            c * this.state.cellSize,
+            r * this.state.cellSize,
+            this.state.cellSize,
+            this.state.cellSize
           );
         }
       }
     }
 
-    if (state.start) {
-      ctx.fillStyle = 'rgba(0, 200, 120, 0.85)';
-      ctx.fillRect(
-        state.start.col * state.cellSize,
-        state.start.row * state.cellSize,
-        state.cellSize,
-        state.cellSize
+    if (this.state.start) {
+      this.ctx.fillStyle = 'rgba(0, 200, 120, 0.85)';
+      this.ctx.fillRect(
+        this.state.start.col * this.state.cellSize,
+        this.state.start.row * this.state.cellSize,
+        this.state.cellSize,
+        this.state.cellSize
       );
     }
 
-    if (state.end) {
-      ctx.fillStyle = 'rgba(220, 60, 60, 0.85)';
-      ctx.fillRect(
-        state.end.col * state.cellSize,
-        state.end.row * state.cellSize,
-        state.cellSize,
-        state.cellSize
+    if (this.state.end) {
+      this.ctx.fillStyle = 'rgba(220, 60, 60, 0.85)';
+      this.ctx.fillRect(
+        this.state.end.col * this.state.cellSize,
+        this.state.end.row * this.state.cellSize,
+        this.state.cellSize,
+        this.state.cellSize
       );
     }
 
-    ctx.strokeStyle = 'rgba(0,0,0,0.15)';
-    ctx.lineWidth = 1 / state.scale;
-    for (let c = 0; c <= state.cols; c += 1) {
-      const x = c * state.cellSize;
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, gridHeight);
-      ctx.stroke();
+    this.ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+    this.ctx.lineWidth = 1 / this.state.scale;
+    for (let c = 0; c <= this.state.cols; c += 1) {
+      const x = c * this.state.cellSize;
+      this.ctx.beginPath();
+      this.ctx.moveTo(x, 0);
+      this.ctx.lineTo(x, gridHeight);
+      this.ctx.stroke();
     }
-    for (let r = 0; r <= state.rows; r += 1) {
-      const y = r * state.cellSize;
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(gridWidth, y);
-      ctx.stroke();
+    for (let r = 0; r <= this.state.rows; r += 1) {
+      const y = r * this.state.cellSize;
+      this.ctx.beginPath();
+      this.ctx.moveTo(0, y);
+      this.ctx.lineTo(gridWidth, y);
+      this.ctx.stroke();
     }
 
-    ctx.restore();
-  };
+    this.ctx.restore();
+  }
 
-  const getCellFromEvent = (e: MouseEvent) => {
-    const rect = canvas.getBoundingClientRect();
-    const x = (e.clientX - rect.left - state.offsetX) / state.scale;
-    const y = (e.clientY - rect.top - state.offsetY) / state.scale;
-    const col = Math.floor(x / state.cellSize);
-    const row = Math.floor(y / state.cellSize);
-    if (row < 0 || col < 0 || row >= state.rows || col >= state.cols) {
+  private getCellFromEvent(e: MouseEvent) {
+    const rect = this.canvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left - this.state.offsetX) / this.state.scale;
+    const y = (e.clientY - rect.top - this.state.offsetY) / this.state.scale;
+    const col = Math.floor(x / this.state.cellSize);
+    const row = Math.floor(y / this.state.cellSize);
+    if (row < 0 || col < 0 || row >= this.state.rows || col >= this.state.cols) {
       return null;
     }
     return { row, col };
-  };
+  }
 
-  const applyToolAt = (pos: CellPos | null) => {
+  private applyToolAt(pos: CellPos | null) {
     if (!pos) return;
     const { row, col } = pos;
-    if (state.tool === 'pen') {
-      state.grid[row][col] = 1;
-    } else if (state.tool === 'eraser') {
-      state.grid[row][col] = 0;
-      if (state.start && state.start.row === row && state.start.col === col) {
-        state.start = null;
+    if (this.state.tool === 'pen') {
+      this.state.grid[row][col] = 1;
+    } else if (this.state.tool === 'eraser') {
+      this.state.grid[row][col] = 0;
+      if (this.state.start && this.state.start.row === row && this.state.start.col === col) {
+        this.state.start = null;
       }
-      if (state.end && state.end.row === row && state.end.col === col) {
-        state.end = null;
+      if (this.state.end && this.state.end.row === row && this.state.end.col === col) {
+        this.state.end = null;
       }
-    } else if (state.tool === 'start') {
-      state.grid[row][col] = 0;
-      state.start = { row, col };
-    } else if (state.tool === 'end') {
-      state.grid[row][col] = 0;
-      state.end = { row, col };
+    } else if (this.state.tool === 'start') {
+      this.state.grid[row][col] = 0;
+      this.state.start = { row, col };
+    } else if (this.state.tool === 'end') {
+      this.state.grid[row][col] = 0;
+      this.state.end = { row, col };
     }
-    draw();
-  };
+    this.draw();
+  }
 
-  const rebuild = (rows: number, cols: number) => {
-    state.rows = rows;
-    state.cols = cols;
-    state.grid = initGrid(rows, cols);
-    state.start = null;
-    state.end = null;
-    resetView();
-    draw();
-  };
+  private rebuild(rows: number, cols: number) {
+    this.state.rows = rows;
+    this.state.cols = cols;
+    this.state.grid = this.initGrid(rows, cols);
+    this.state.start = null;
+    this.state.end = null;
+    this.resetView();
+    this.draw();
+  }
 
-  createBtn.addEventListener('click', () => {
-    const rows = clamp(rowsInput.input.valueAsNumber || 0, 5, 80);
-    const cols = clamp(colsInput.input.valueAsNumber || 0, 5, 80);
-    rowsInput.input.valueAsNumber = rows;
-    colsInput.input.valueAsNumber = cols;
-    rebuild(rows, cols);
-  });
+  private handleCreate() {
+    const rows = this.clamp(this.rowsInput.valueAsNumber || 0, 5, 80);
+    const cols = this.clamp(this.colsInput.valueAsNumber || 0, 5, 80);
+    this.rowsInput.valueAsNumber = rows;
+    this.colsInput.valueAsNumber = cols;
+    this.rebuild(rows, cols);
+  }
 
-  clearBtn.addEventListener('click', () => {
-    state.grid = initGrid(state.rows, state.cols);
-    state.start = null;
-    state.end = null;
-    draw();
-  });
+  private handleClear() {
+    this.state.grid = this.initGrid(this.state.rows, this.state.cols);
+    this.state.start = null;
+    this.state.end = null;
+    this.draw();
+  }
 
-  resetBtn.addEventListener('click', () => {
-    rebuild(state.rows, state.cols);
-  });
+  private handleReset() {
+    this.rebuild(this.state.rows, this.state.cols);
+  }
 
-  applyBtn.addEventListener('click', () => {
-    const mazeData = [state.grid.map(row => row.slice()).reverse()];
+  private handleApply() {
+    const mazeData = [this.state.grid.map(row => row.slice()).reverse()];
     const mazeApp = (window as any).mazeApp;
     if (!mazeApp || typeof mazeApp.updateMaze !== 'function') {
       console.warn('mazeApp.updateMaze not available');
       return;
     }
-    mazeApp.updateMaze(mazeData, false);
-  });
+    const start = this.state.start
+      ? { row: this.state.rows - 1 - this.state.start.row, col: this.state.start.col }
+      : null;
+    const end = this.state.end
+      ? { row: this.state.rows - 1 - this.state.end.row, col: this.state.end.col }
+      : null;
+    mazeApp.updateMaze(mazeData, false, {
+      start,
+      end,
+    });
+  }
 
-  penBtn.addEventListener('click', () => setTool('pen'));
-  eraserBtn.addEventListener('click', () => setTool('eraser'));
-  startBtn.addEventListener('click', () => setTool('start'));
-  endBtn.addEventListener('click', () => setTool('end'));
-
-  canvas.addEventListener('contextmenu', e => e.preventDefault());
-
-  canvas.addEventListener('mousedown', e => {
+  private handleMouseDown(e: MouseEvent) {
     if (e.button === 2) {
-      state.isPanning = true;
-      state.lastX = e.clientX;
-      state.lastY = e.clientY;
+      this.state.isPanning = true;
+      this.state.lastX = e.clientX;
+      this.state.lastY = e.clientY;
       return;
     }
     if (e.button === 0) {
-      state.isDrawing = true;
-      applyToolAt(getCellFromEvent(e));
+      this.state.isDrawing = true;
+      this.applyToolAt(this.getCellFromEvent(e));
     }
-  });
+  }
 
-  canvas.addEventListener('mousemove', e => {
-    if (state.isPanning) {
-      const dx = e.clientX - state.lastX;
-      const dy = e.clientY - state.lastY;
-      state.lastX = e.clientX;
-      state.lastY = e.clientY;
-      state.offsetX += dx;
-      state.offsetY += dy;
-      draw();
+  private handleMouseMove(e: MouseEvent) {
+    if (this.state.isPanning) {
+      const dx = e.clientX - this.state.lastX;
+      const dy = e.clientY - this.state.lastY;
+      this.state.lastX = e.clientX;
+      this.state.lastY = e.clientY;
+      this.state.offsetX += dx;
+      this.state.offsetY += dy;
+      this.draw();
       return;
     }
-    if (state.isDrawing) {
-      applyToolAt(getCellFromEvent(e));
+    if (this.state.isDrawing) {
+      this.applyToolAt(this.getCellFromEvent(e));
     }
-  });
+  }
 
-  canvas.addEventListener('mouseup', () => {
-    state.isPanning = false;
-    state.isDrawing = false;
-  });
+  private handleMouseUp() {
+    this.state.isPanning = false;
+    this.state.isDrawing = false;
+  }
 
-  canvas.addEventListener('mouseleave', () => {
-    state.isPanning = false;
-    state.isDrawing = false;
-  });
+  private handleMouseLeave() {
+    this.state.isPanning = false;
+    this.state.isDrawing = false;
+  }
 
-  canvas.addEventListener(
-    'wheel',
-    e => {
-      e.preventDefault();
-      const rect = canvas.getBoundingClientRect();
-      const mouseX = e.clientX - rect.left;
-      const mouseY = e.clientY - rect.top;
+  private handleWheel(e: WheelEvent) {
+    e.preventDefault();
+    const rect = this.canvas.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
 
-      const zoomFactor = Math.exp(-e.deltaY * 0.0015);
-      const nextScale = clamp(state.scale * zoomFactor, state.minScale, state.maxScale);
+    const zoomFactor = Math.exp(-e.deltaY * 0.0015);
+    const nextScale = this.clamp(
+      this.state.scale * zoomFactor,
+      this.state.minScale,
+      this.state.maxScale
+    );
 
-      const worldX = (mouseX - state.offsetX) / state.scale;
-      const worldY = (mouseY - state.offsetY) / state.scale;
+    const worldX = (mouseX - this.state.offsetX) / this.state.scale;
+    const worldY = (mouseY - this.state.offsetY) / this.state.scale;
 
-      state.scale = nextScale;
-      state.offsetX = mouseX - worldX * state.scale;
-      state.offsetY = mouseY - worldY * state.scale;
-      draw();
-    },
-    { passive: false }
-  );
+    this.state.scale = nextScale;
+    this.state.offsetX = mouseX - worldX * this.state.scale;
+    this.state.offsetY = mouseY - worldY * this.state.scale;
+    this.draw();
+  }
+}
 
-  setTool('pen');
-  rebuild(state.rows, state.cols);
+/**
+ * Show maze popup - Custom maze editor
+ */
+export function showMazePopup(toolbar: Toolbar): void {
+  try {
+    new MazePopup(toolbar);
+  } catch (error) {
+    console.error('Failed to initialize maze popup:', error);
+  }
 }
 
 function createNumberInput(label: string, min: number, max: number, value: number) {

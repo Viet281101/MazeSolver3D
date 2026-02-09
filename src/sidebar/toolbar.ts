@@ -23,6 +23,7 @@ export class Toolbar {
   private popupOpen: boolean;
   private currentPopup: HTMLElement | null;
   private currentCloseIcon: HTMLImageElement | null;
+  private currentHideIcon: HTMLImageElement | null;
 
   private mouseMoveHandler!: (e: MouseEvent) => void;
   private mouseDownHandler!: (e: MouseEvent | TouchEvent) => void;
@@ -39,6 +40,7 @@ export class Toolbar {
     this.popupOpen = false;
     this.currentPopup = null;
     this.currentCloseIcon = null;
+    this.currentHideIcon = null;
 
     this.preloadImages().then(() => {
       this.imagesLoaded = true;
@@ -277,15 +279,11 @@ export class Toolbar {
 
     const target = e.target as Node;
     if (this.canvas.contains(target)) return;
+    if (this.currentCloseIcon && this.currentCloseIcon.contains(target)) return;
+    if (this.currentHideIcon && this.currentHideIcon.contains(target)) return;
+    if (this.currentPopup && this.currentPopup.contains(target)) return;
 
-    const popups = ['solvePopup', 'tutorialPopup', 'settingsPopup', 'mazePopup'];
-    for (const popupId of popups) {
-      const popup = document.getElementById(popupId);
-      if (popup && !popup.contains(target)) {
-        this.closeCurrentPopup();
-        break;
-      }
-    }
+    this.hideCurrentPopup();
   }
 
   public resizeToolbar(): void {
@@ -320,15 +318,36 @@ export class Toolbar {
   }
 
   private togglePopup(type: string): void {
-    if (this.currentPopup && this.currentPopup.id === `${type}Popup`) {
-      this.closePopup(type);
-    } else {
-      this.closeCurrentPopup();
-      this.showPopup(type);
+    const popupId = `${type}Popup`;
+    if (
+      this.currentPopup &&
+      this.currentPopup.id === popupId &&
+      this.isPopupVisible(this.currentPopup)
+    ) {
+      this.hideCurrentPopup();
+      return;
     }
+    if (
+      this.currentPopup &&
+      this.currentPopup.id !== popupId &&
+      this.isPopupVisible(this.currentPopup)
+    ) {
+      this.hideCurrentPopup();
+    }
+    this.showPopup(type);
   }
 
   private showPopup(type: string): void {
+    const popupId = `${type}Popup`;
+    const existingPopup = document.getElementById(popupId);
+    if (existingPopup) {
+      existingPopup.style.display = 'block';
+      this.popupOpen = true;
+      this.currentPopup = existingPopup;
+      this.addCloseIcon();
+      this.addHideIcon();
+      return;
+    }
     this.popupOpen = true;
     switch (type) {
       case 'solve':
@@ -365,6 +384,7 @@ export class Toolbar {
     popupContainer.appendChild(titleElement);
 
     this.addCloseIcon();
+    this.addHideIcon();
     this.currentPopup = popupContainer;
     return popupContainer;
   }
@@ -377,6 +397,7 @@ export class Toolbar {
     const closeIcon = new Image();
     closeIcon.src = '/MazeSolver3D/icon/close.png';
     closeIcon.className = 'toolbar-popup__close';
+    closeIcon.title = 'Close';
     closeIcon.style.setProperty('--toolbar-close-top', this.isMobile ? '56px' : '10px');
     closeIcon.style.setProperty(
       '--toolbar-close-left',
@@ -387,6 +408,25 @@ export class Toolbar {
     this.currentCloseIcon = closeIcon;
   }
 
+  private addHideIcon(): void {
+    if (this.currentHideIcon) {
+      document.body.removeChild(this.currentHideIcon);
+    }
+
+    const hideIcon = new Image();
+    hideIcon.src = '/MazeSolver3D/icon/hide.png';
+    hideIcon.className = 'toolbar-popup__hide';
+    hideIcon.title = 'Hide';
+    hideIcon.style.setProperty('--toolbar-hide-top', this.isMobile ? '56px' : '10px');
+    hideIcon.style.setProperty(
+      '--toolbar-hide-left',
+      this.isMobile ? 'calc(50% + 140px)' : '360px'
+    );
+    hideIcon.addEventListener('click', () => this.hideCurrentPopup());
+    document.body.appendChild(hideIcon);
+    this.currentHideIcon = hideIcon;
+  }
+
   public closePopup(type: string): void {
     const popup = document.getElementById(`${type}Popup`);
     if (popup && popup.parentNode) {
@@ -395,6 +435,10 @@ export class Toolbar {
     if (this.currentCloseIcon && this.currentCloseIcon.parentNode) {
       this.currentCloseIcon.parentNode.removeChild(this.currentCloseIcon);
       this.currentCloseIcon = null;
+    }
+    if (this.currentHideIcon && this.currentHideIcon.parentNode) {
+      this.currentHideIcon.parentNode.removeChild(this.currentHideIcon);
+      this.currentHideIcon = null;
     }
     const inputs = document.querySelectorAll('.popup-input');
     inputs.forEach(input => input.parentElement?.removeChild(input));
@@ -411,7 +455,30 @@ export class Toolbar {
       this.currentCloseIcon.parentNode.removeChild(this.currentCloseIcon);
       this.currentCloseIcon = null;
     }
+    if (this.currentHideIcon && this.currentHideIcon.parentNode) {
+      this.currentHideIcon.parentNode.removeChild(this.currentHideIcon);
+      this.currentHideIcon = null;
+    }
     this.popupOpen = false;
+  }
+
+  private hideCurrentPopup(): void {
+    if (this.currentPopup) {
+      this.currentPopup.style.display = 'none';
+    }
+    if (this.currentCloseIcon && this.currentCloseIcon.parentNode) {
+      this.currentCloseIcon.parentNode.removeChild(this.currentCloseIcon);
+      this.currentCloseIcon = null;
+    }
+    if (this.currentHideIcon && this.currentHideIcon.parentNode) {
+      this.currentHideIcon.parentNode.removeChild(this.currentHideIcon);
+      this.currentHideIcon = null;
+    }
+    this.popupOpen = false;
+  }
+
+  private isPopupVisible(popup: HTMLElement): boolean {
+    return popup.style.display !== 'none';
   }
 
   public destroy(): void {

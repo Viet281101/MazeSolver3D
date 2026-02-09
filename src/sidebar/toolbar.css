@@ -33,7 +33,17 @@
 .toolbar-popup__close {
   position: fixed;
   top: var(--toolbar-close-top, 10px);
-  left: var(--toolbar-close-left, 400px);
+  left: var(--toolbar-close-left, 410px);
+  cursor: pointer;
+  z-index: 1001;
+  transform: translateX(-50%);
+  background-color: rgba(0, 0, 0, 0);
+}
+
+.toolbar-popup__hide {
+  position: fixed;
+  top: var(--toolbar-hide-top, 10px);
+  left: var(--toolbar-hide-left, 348px);
   cursor: pointer;
   z-index: 1001;
   transform: translateX(-50%);

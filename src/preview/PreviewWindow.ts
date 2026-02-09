@@ -254,11 +254,19 @@ export class PreviewWindow {
   /**
    * Update maze data and redraw
    */
-  public updateMaze(mazeData: number[][]): void {
+  public updateMaze(
+    mazeData: number[][],
+    markers?: { start?: { row: number; col: number } | null; end?: { row: number; col: number } | null }
+  ): void {
     this.mazeData = mazeData;
-    const { start, end } = this.computeStartEndCells(mazeData);
-    this.startCell = start;
-    this.endCell = end;
+    if (markers) {
+      this.startCell = markers.start ?? null;
+      this.endCell = markers.end ?? null;
+    } else {
+      const { start, end } = this.computeStartEndCells(mazeData);
+      this.startCell = start;
+      this.endCell = end;
+    }
     this.layout = this.computeLayout(mazeData);
     this.render();
   }
