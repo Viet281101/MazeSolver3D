@@ -5,6 +5,14 @@ export default defineConfig({
   base: '/MazeSolver3D/',
   build: {
     outDir: 'dist',
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          three: ['three'],
+          datgui: ['dat.gui'],
+        },
+      },
+    },
   },
   server: {
     open: true,
