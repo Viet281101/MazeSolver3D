@@ -78,6 +78,7 @@ export abstract class Maze {
       antialias: true,
       powerPreference: 'high-performance',
     });
+    this.renderer.domElement.style.touchAction = 'none';
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
 
     // Initialize resource managers
@@ -117,12 +118,23 @@ export abstract class Maze {
   protected abstract createMaze(): void;
 
   /**
+   * Update maze data and rebuild geometry without recreating renderer/controls
+   */
+  public updateMazeData(maze: number[][][]): void {
+    if (this.isDisposed) return;
+    this.maze = maze;
+    this.createMaze();
+    this.requestRender();
+  }
+
+  /**
    * Position camera to view entire maze
    */
   protected positionCamera(centerX: number, centerZ: number, distance: number): void {
     this.camera.position.set(centerX, 10, distance);
     this.controls.target.set(centerX, 0, centerZ);
     this.controls.update();
+    this.controls.saveState();
   }
 
   /**

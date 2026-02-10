@@ -1,4 +1,5 @@
 import './PreviewWindow.css';
+import { PREVIEW_COLORS } from './previewConstants';
 
 export interface PreviewWindowConfig {
   initialX?: number;
@@ -6,6 +7,8 @@ export interface PreviewWindowConfig {
   width?: number;
   height?: number;
   title?: string;
+  onHide?: () => void;
+  onClose?: () => void;
 }
 
 /**
@@ -17,7 +20,16 @@ export class PreviewWindow {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
   private closeButton: HTMLButtonElement;
+  private hideButton: HTMLButtonElement;
+  private gridToggleButton: HTMLButtonElement;
+  private footer!: HTMLDivElement;
   private legend: HTMLDivElement;
+  private startCell: { row: number; col: number } | null = null;
+  private endCell: { row: number; col: number } | null = null;
+  private showGrid: boolean = false;
+  private isClosed: boolean = false;
+  private onHide?: () => void;
+  private onClose?: () => void;
 
   private isDragging: boolean = false;
   private dragStartX: number = 0;
@@ -27,13 +39,30 @@ export class PreviewWindow {
 
   private width: number;
   private height: number;
-  private canvasWidth: number = 256;
-  private canvasHeight: number = 256;
+  private readonly canvasWidth: number = 256;
+  private readonly canvasHeight: number = 256;
 
   private isVisible: boolean = true;
+  private isHiding: boolean = false;
+  private hideTimeoutId: number | null = null;
+  private readonly hideTransitionMs: number = 350;
   private mazeData: number[][] | null = null;
+  private layout: {
+    rows: number;
+    cols: number;
+    cellSize: number;
+    offsetX: number;
+    offsetY: number;
+  } | null = null;
+
+  private onMouseMoveHandler: (e: MouseEvent) => void;
+  private onMouseUpHandler: () => void;
+  private onMouseDownHandler: (e: MouseEvent) => void;
 
   constructor(config: PreviewWindowConfig = {}) {
+    this.onHide = config.onHide;
+    this.onClose = config.onClose;
+
     this.width = config.width ?? 300;
     this.height = config.height ?? 320;
     const margin = 20;
@@ -49,6 +78,32 @@ export class PreviewWindow {
     this.container.style.height = `${this.height}px`;
     this.container.style.left = `${this.windowX}px`;
     this.container.style.top = `${this.windowY}px`;
+    this.container.style.setProperty('--preview-bg', PREVIEW_COLORS.background);
+    this.container.style.setProperty('--preview-surface', PREVIEW_COLORS.surface);
+    this.container.style.setProperty('--preview-surface-top', PREVIEW_COLORS.surfaceTop);
+    this.container.style.setProperty('--preview-wall', PREVIEW_COLORS.wall);
+    this.container.style.setProperty('--preview-path', PREVIEW_COLORS.path);
+    this.container.style.setProperty('--preview-grid', PREVIEW_COLORS.grid);
+    this.container.style.setProperty('--preview-border', PREVIEW_COLORS.border);
+    this.container.style.setProperty('--preview-border-soft', PREVIEW_COLORS.borderSoft);
+    this.container.style.setProperty('--preview-footer-border', PREVIEW_COLORS.footerBorder);
+    this.container.style.setProperty('--preview-legend-bg', PREVIEW_COLORS.legendBg);
+    this.container.style.setProperty('--preview-button-bg', PREVIEW_COLORS.buttonBg);
+    this.container.style.setProperty('--preview-button-border', PREVIEW_COLORS.buttonBorder);
+    this.container.style.setProperty('--preview-button-hover', PREVIEW_COLORS.buttonHover);
+    this.container.style.setProperty('--preview-button-active', PREVIEW_COLORS.buttonActive);
+    this.container.style.setProperty(
+      '--preview-button-active-border',
+      PREVIEW_COLORS.buttonActiveBorder
+    );
+    this.container.style.setProperty('--preview-close-active', PREVIEW_COLORS.closeActive);
+    this.container.style.setProperty('--preview-resize-grip', PREVIEW_COLORS.resizeGrip);
+    this.container.style.setProperty('--preview-start', PREVIEW_COLORS.markerStart);
+    this.container.style.setProperty('--preview-end', PREVIEW_COLORS.markerEnd);
+    this.container.style.setProperty('--preview-marker-both', PREVIEW_COLORS.markerBoth);
+    this.container.style.setProperty('--preview-marker-stroke', PREVIEW_COLORS.markerStroke);
+    this.container.style.setProperty('--preview-marker-text', PREVIEW_COLORS.markerText);
+    this.container.style.setProperty('--preview-hide-duration', `${this.hideTransitionMs}ms`);
 
     // Create title bar
     this.titleBar = document.createElement('div');
@@ -58,14 +113,37 @@ export class PreviewWindow {
     // Create close button
     this.closeButton = document.createElement('button');
     this.closeButton.className = 'preview-close-btn';
-    this.closeButton.innerHTML = '×';
+    this.closeButton.textContent = 'x';
+
+    // Create hide button
+    this.hideButton = document.createElement('button');
+    this.hideButton.className = 'preview-hide-btn';
+    this.hideButton.type = 'button';
+    this.hideButton.setAttribute('title', 'Hide preview');
+    this.hideButton.textContent = '-';
+
+    // Create grid toggle button
+    this.gridToggleButton = document.createElement('button');
+    this.gridToggleButton.className = 'preview-grid-btn';
+    this.gridToggleButton.type = 'button';
+    this.gridToggleButton.setAttribute('aria-pressed', String(this.showGrid));
+    this.gridToggleButton.setAttribute('title', 'Toggle grid');
+    this.gridToggleButton.textContent = 'Grid';
+    this.gridToggleButton.classList.toggle('active', this.showGrid);
 
     // Create legend
     this.legend = document.createElement('div');
     this.legend.className = 'preview-legend';
     this.legend.innerHTML =
       '<span class="preview-legend-item"><i class="preview-swatch wall"></i>Wall</span>' +
-      '<span class="preview-legend-item"><i class="preview-swatch path"></i>Path</span>';
+      '<span class="preview-legend-item"><i class="preview-swatch path"></i>Path</span>' +
+      '<span class="preview-legend-item"><i class="preview-swatch start"></i>Start</span>' +
+      '<span class="preview-legend-item"><i class="preview-swatch end"></i>End</span>';
+
+    // Create footer
+    this.footer = document.createElement('div');
+    this.footer.className = 'preview-footer';
+    this.footer.appendChild(this.gridToggleButton);
 
     // Create canvas
     this.canvas = document.createElement('canvas');
@@ -78,15 +156,25 @@ export class PreviewWindow {
       throw new Error('Could not get 2D context');
     }
     this.ctx = context;
+    this.ctx.imageSmoothingEnabled = false;
 
     // Assemble window
-    this.titleBar.appendChild(this.closeButton);
+    const titleButtons = document.createElement('div');
+    titleButtons.className = 'preview-title-actions';
+    titleButtons.appendChild(this.hideButton);
+    titleButtons.appendChild(this.closeButton);
+
+    this.titleBar.appendChild(titleButtons);
     this.container.appendChild(this.titleBar);
     this.container.appendChild(this.legend);
     this.container.appendChild(this.canvas);
+    this.container.appendChild(this.footer);
     document.body.appendChild(this.container);
 
     // Setup event listeners
+    this.onMouseMoveHandler = e => this.onMouseMove(e);
+    this.onMouseUpHandler = () => this.onMouseUp();
+    this.onMouseDownHandler = e => this.onMouseDown(e);
     this.setupEventListeners();
 
     // Initial render
@@ -100,13 +188,27 @@ export class PreviewWindow {
     // Close button
     this.closeButton.addEventListener('click', e => {
       e.stopPropagation();
+      this.close();
+    });
+
+    // Hide button
+    this.hideButton.addEventListener('click', e => {
+      e.stopPropagation();
       this.hide();
+    });
+    // Grid toggle button
+    this.gridToggleButton.addEventListener('click', e => {
+      e.stopPropagation();
+      this.showGrid = !this.showGrid;
+      this.gridToggleButton.setAttribute('aria-pressed', String(this.showGrid));
+      this.gridToggleButton.classList.toggle('active', this.showGrid);
+      this.render();
     });
 
     // Dragging
-    this.titleBar.addEventListener('mousedown', e => this.onMouseDown(e));
-    document.addEventListener('mousemove', e => this.onMouseMove(e));
-    document.addEventListener('mouseup', () => this.onMouseUp());
+    this.titleBar.addEventListener('mousedown', this.onMouseDownHandler);
+    document.addEventListener('mousemove', this.onMouseMoveHandler);
+    document.addEventListener('mouseup', this.onMouseUpHandler);
 
     // Prevent text selection while dragging
     this.titleBar.addEventListener('selectstart', e => e.preventDefault());
@@ -152,8 +254,23 @@ export class PreviewWindow {
   /**
    * Update maze data and redraw
    */
-  public updateMaze(mazeData: number[][]): void {
+  public updateMaze(
+    mazeData: number[][],
+    markers?: {
+      start?: { row: number; col: number } | null;
+      end?: { row: number; col: number } | null;
+    }
+  ): void {
     this.mazeData = mazeData;
+    if (markers) {
+      this.startCell = markers.start ?? null;
+      this.endCell = markers.end ?? null;
+    } else {
+      const { start, end } = this.computeStartEndCells(mazeData);
+      this.startCell = start;
+      this.endCell = end;
+    }
+    this.layout = this.computeLayout(mazeData);
     this.render();
   }
 
@@ -161,55 +278,163 @@ export class PreviewWindow {
    * Render 2D maze on canvas
    */
   private render(): void {
-    // Clear canvas
-    this.ctx.fillStyle = '#2a2a2a';
+    this.ctx.fillStyle = PREVIEW_COLORS.background;
     this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
 
     if (!this.mazeData || this.mazeData.length === 0) {
       return;
     }
 
-    const rows = this.mazeData.length;
-    const cols = this.mazeData[0].length;
+    if (!this.layout) {
+      this.layout = this.computeLayout(this.mazeData);
+    }
+    if (!this.layout) {
+      return;
+    }
 
-    // Calculate cell size to fit canvas
-    const cellWidth = this.canvasWidth / cols;
-    const cellHeight = this.canvasHeight / rows;
-    const cellSize = Math.min(cellWidth, cellHeight);
-
-    // Center the maze
-    const offsetX = (this.canvasWidth - cellSize * cols) / 2;
-    const offsetY = (this.canvasHeight - cellSize * rows) / 2;
+    const { rows, cols, cellSize, offsetX, offsetY } = this.layout;
+    const mazeData = this.mazeData;
 
     // Draw cells
+    const fillPad = this.showGrid ? 0 : 0.5;
+    let currentFill: string | null = null;
+    if (this.showGrid) {
+      this.ctx.strokeStyle = PREVIEW_COLORS.grid;
+      this.ctx.lineWidth = 1;
+    }
     for (let row = 0; row < rows; row++) {
+      const mazeRow = mazeData[row];
       for (let col = 0; col < cols; col++) {
         const x = offsetX + col * cellSize;
         const y = offsetY + (rows - 1 - row) * cellSize;
 
-        if (this.mazeData[row][col] === 1) {
-          // Wall - dark gray
-          this.ctx.fillStyle = '#808080';
-        } else {
-          // Path - light gray
-          this.ctx.fillStyle = '#c0c0c0';
+        const nextFill = mazeRow[col] === 1 ? PREVIEW_COLORS.wall : PREVIEW_COLORS.path;
+        if (currentFill !== nextFill) {
+          currentFill = nextFill;
+          this.ctx.fillStyle = currentFill;
         }
 
-        this.ctx.fillRect(x, y, cellSize, cellSize);
+        this.ctx.fillRect(x - fillPad, y - fillPad, cellSize + fillPad * 2, cellSize + fillPad * 2);
 
         // Draw grid lines
-        this.ctx.strokeStyle = '#1a1a1a';
-        this.ctx.lineWidth = 1;
-        this.ctx.strokeRect(x, y, cellSize, cellSize);
+        if (this.showGrid) {
+          this.ctx.strokeRect(x, y, cellSize, cellSize);
+        }
       }
     }
+
+    const hasSameCell =
+      this.startCell &&
+      this.endCell &&
+      this.startCell.row === this.endCell.row &&
+      this.startCell.col === this.endCell.col;
+
+    if (hasSameCell && this.startCell) {
+      this.drawMarker(this.startCell, rows, cellSize, offsetX, offsetY, PREVIEW_COLORS.markerBoth);
+    } else {
+      if (this.startCell) {
+        this.drawMarker(
+          this.startCell,
+          rows,
+          cellSize,
+          offsetX,
+          offsetY,
+          PREVIEW_COLORS.markerStart
+        );
+      }
+      if (this.endCell) {
+        this.drawMarker(this.endCell, rows, cellSize, offsetX, offsetY, PREVIEW_COLORS.markerEnd);
+      }
+    }
+  }
+
+  private computeLayout(mazeData: number[][]): {
+    rows: number;
+    cols: number;
+    cellSize: number;
+    offsetX: number;
+    offsetY: number;
+  } | null {
+    const rows = mazeData.length;
+    if (rows === 0) {
+      return null;
+    }
+    const cols = mazeData[0].length;
+
+    const cellWidth = this.canvasWidth / cols;
+    const cellHeight = this.canvasHeight / rows;
+    const cellSize = Math.min(cellWidth, cellHeight);
+
+    const offsetX = (this.canvasWidth - cellSize * cols) / 2;
+    const offsetY = (this.canvasHeight - cellSize * rows) / 2;
+
+    return { rows, cols, cellSize, offsetX, offsetY };
+  }
+
+  private computeStartEndCells(mazeData: number[][]): {
+    start: { row: number; col: number } | null;
+    end: { row: number; col: number } | null;
+  } {
+    const rows = mazeData.length;
+    if (rows === 0) {
+      return { start: null, end: null };
+    }
+    const cols = mazeData[0].length;
+    const boundaryCells: { row: number; col: number }[] = [];
+    const pathCells: { row: number; col: number }[] = [];
+
+    for (let row = 0; row < rows; row++) {
+      for (let col = 0; col < cols; col++) {
+        if (mazeData[row][col] !== 0) continue;
+        const cell = { row, col };
+        pathCells.push(cell);
+        if (row === 0 || row === rows - 1 || col === 0 || col === cols - 1) {
+          boundaryCells.push(cell);
+        }
+      }
+    }
+
+    let start = boundaryCells[0] ?? null;
+    let end = boundaryCells.length > 1 ? boundaryCells[boundaryCells.length - 1] : null;
+
+    if (!start) {
+      start = pathCells[0] ?? null;
+    }
+
+    if (!end) {
+      end = pathCells.length > 1 ? pathCells[pathCells.length - 1] : start;
+    }
+
+    return { start, end };
+  }
+
+  private drawMarker(
+    cell: { row: number; col: number },
+    rows: number,
+    cellSize: number,
+    offsetX: number,
+    offsetY: number,
+    color: string
+  ): void {
+    const x = offsetX + cell.col * cellSize;
+    const y = offsetY + (rows - 1 - cell.row) * cellSize;
+
+    this.ctx.fillStyle = color;
+    this.ctx.fillRect(x, y, cellSize, cellSize);
   }
 
   /**
    * Show the preview window
    */
   public show(): void {
+    if (this.isClosed) return;
     this.isVisible = true;
+    this.isHiding = false;
+    if (this.hideTimeoutId !== null) {
+      window.clearTimeout(this.hideTimeoutId);
+      this.hideTimeoutId = null;
+    }
+    this.container.classList.remove('is-hiding');
     this.container.style.display = 'block';
   }
 
@@ -217,8 +442,26 @@ export class PreviewWindow {
    * Hide the preview window
    */
   public hide(): void {
+    if (this.isClosed || this.isHiding || !this.isVisible) return;
     this.isVisible = false;
-    this.container.style.display = 'none';
+    this.isHiding = true;
+    if (this.onHide) {
+      this.onHide();
+    }
+
+    const finalizeHide = () => {
+      if (!this.isHiding || this.isClosed) return;
+      this.isHiding = false;
+      this.container.style.display = 'none';
+      this.container.classList.remove('is-hiding');
+      if (this.hideTimeoutId !== null) {
+        window.clearTimeout(this.hideTimeoutId);
+        this.hideTimeoutId = null;
+      }
+    };
+
+    this.container.classList.add('is-hiding');
+    this.hideTimeoutId = window.setTimeout(finalizeHide, this.hideTransitionMs + 40);
   }
 
   /**
@@ -256,7 +499,32 @@ export class PreviewWindow {
   /**
    * Destroy the preview window
    */
+  public close(): void {
+    if (this.isClosed) return;
+    this.isClosed = true;
+    this.isVisible = false;
+    this.isHiding = false;
+    if (this.hideTimeoutId !== null) {
+      window.clearTimeout(this.hideTimeoutId);
+      this.hideTimeoutId = null;
+    }
+    if (this.onClose) {
+      this.onClose();
+    }
+    this.destroy();
+  }
+
+  /**
+   * Destroy the preview window
+   */
   public destroy(): void {
+    this.titleBar.removeEventListener('mousedown', this.onMouseDownHandler);
+    document.removeEventListener('mousemove', this.onMouseMoveHandler);
+    document.removeEventListener('mouseup', this.onMouseUpHandler);
+    if (this.hideTimeoutId !== null) {
+      window.clearTimeout(this.hideTimeoutId);
+      this.hideTimeoutId = null;
+    }
     this.container.remove();
   }
 }

@@ -213,6 +213,33 @@ export class GUIController {
   }
 
   /**
+   * Enable/disable a controller input
+   */
+  public setControllerEnabled<K extends keyof GUISettings>(
+    key: K,
+    enabled: boolean,
+    tooltip?: string
+  ): void {
+    const controller = this.controllers.get(key);
+    if (!controller || !controller.domElement) return;
+    const domElement = controller.domElement as HTMLElement;
+    const input = domElement.querySelector('input, select, button') as
+      | HTMLInputElement
+      | HTMLSelectElement
+      | HTMLButtonElement
+      | null;
+    if (input) {
+      input.disabled = !enabled;
+    }
+    if (tooltip) {
+      domElement.setAttribute('title', tooltip);
+    } else {
+      domElement.removeAttribute('title');
+    }
+    domElement.classList.toggle('is-disabled', !enabled);
+  }
+
+  /**
    * Show/hide GUI
    */
   public setVisible(visible: boolean): void {

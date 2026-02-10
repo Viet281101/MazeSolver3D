@@ -13,7 +13,7 @@ export class MainApp implements MazeController {
   private toolbar: Toolbar;
   private maze: SingleLayerMaze | MultiLayerMaze;
   private guiController: GUIController;
-  private previewWindow: PreviewWindow;
+  private previewWindow: PreviewWindow | null;
   private resizeHandler: () => void;
   private debugOverlay: HTMLDivElement | null = null;
   private debugRafId: number | null = null;
@@ -22,8 +22,13 @@ export class MainApp implements MazeController {
   private readonly debugUpdateIntervalMs: number = 250;
   private renderCount: number = 0;
   private renderListener: () => void;
+  private previewMarkers: {
+    start: { row: number; col: number } | null;
+    end: { row: number; col: number } | null;
+  } | null = null;
   private isDebugOverlayVisible: boolean = true;
   private isPreviewVisible: boolean = true;
+  private isPreviewClosed: boolean = false;
   private readonly mobileBreakpoint: number = 800;
 
   constructor() {
@@ -57,6 +62,8 @@ export class MainApp implements MazeController {
       title: 'Preview',
       width: 300,
       height: 320,
+      onHide: () => this.handlePreviewHidden(),
+      onClose: () => this.handlePreviewClosed(),
     });
 
     // Initialize debug overlay
@@ -81,7 +88,7 @@ export class MainApp implements MazeController {
     // Add keyboard shortcut to toggle preview (P key)
     window.addEventListener('keydown', e => {
       if (e.key === 'p' || e.key === 'P') {
-        this.previewWindow.toggle();
+        this.setPreviewVisible(!this.isPreviewVisible);
       }
     });
   }
@@ -118,43 +125,62 @@ export class MainApp implements MazeController {
     this.toolbar.resizeToolbar();
     this.maze.resize();
     this.guiController.checkWindowSize();
-    this.previewWindow.handleWindowResize();
+    this.previewWindow?.handleWindowResize();
 
     const isMobile = window.innerWidth <= this.mobileBreakpoint;
     const nextDebugVisible = !isMobile;
     const nextPreviewVisible = !isMobile;
+    const effectivePreviewVisible = nextPreviewVisible && !this.isPreviewClosed;
 
     if (this.isDebugOverlayVisible !== nextDebugVisible) {
       this.setDebugOverlayVisible(nextDebugVisible);
       this.guiController.updateSetting('showDebug', nextDebugVisible);
     }
 
-    if (this.isPreviewVisible !== nextPreviewVisible) {
-      this.setPreviewVisible(nextPreviewVisible);
-      this.guiController.updateSetting('showPreview', nextPreviewVisible);
+    if (this.isPreviewVisible !== effectivePreviewVisible) {
+      this.setPreviewVisible(effectivePreviewVisible);
+      this.guiController.updateSetting('showPreview', effectivePreviewVisible);
     }
   }
 
   /**
    * Update maze with new data
    */
-  public updateMaze(newMaze: number[][][], multiLayer: boolean = false): void {
-    // Destroy old maze completely
-    this.maze.removeRenderListener(this.renderListener);
-    this.maze.destroy();
+  public updateMaze(
+    newMaze: number[][][],
+    multiLayer: boolean = false,
+    markers?: {
+      start?: { row: number; col: number } | null;
+      end?: { row: number; col: number } | null;
+    }
+  ): void {
+    const canReuseSingle = !multiLayer && this.maze instanceof SingleLayerMaze;
+    const canReuseMulti = multiLayer && this.maze instanceof MultiLayerMaze;
 
-    // Create new maze
-    if (multiLayer) {
-      this.maze = new MultiLayerMaze(this.canvas, newMaze);
+    if (canReuseSingle || canReuseMulti) {
+      this.maze.updateMazeData(newMaze);
     } else {
-      this.maze = new SingleLayerMaze(this.canvas, newMaze);
+      // Destroy old maze completely
+      this.maze.removeRenderListener(this.renderListener);
+      this.maze.destroy();
+
+      // Create new maze
+      if (multiLayer) {
+        this.maze = new MultiLayerMaze(this.canvas, newMaze);
+      } else {
+        this.maze = new SingleLayerMaze(this.canvas, newMaze);
+      }
+
+      // Apply GUI settings to new maze
+      this.applyGUISettings();
+
+      // Re-attach render listener for debug overlay
+      this.maze.addRenderListener(this.renderListener);
     }
 
-    // Apply GUI settings to new maze
-    this.applyGUISettings();
-
-    // Re-attach render listener for debug overlay
-    this.maze.addRenderListener(this.renderListener);
+    this.previewMarkers = markers
+      ? { start: markers.start ?? null, end: markers.end ?? null }
+      : null;
 
     // Update preview
     this.updatePreview();
@@ -167,7 +193,11 @@ export class MainApp implements MazeController {
     // Get first layer of maze for 2D preview
     const mazeData = this.maze['maze'];
     if (mazeData && mazeData.length > 0) {
-      this.previewWindow.updateMaze(mazeData[0]);
+      if (this.previewMarkers) {
+        this.previewWindow?.updateMaze(mazeData[0], this.previewMarkers);
+      } else {
+        this.previewWindow?.updateMaze(mazeData[0]);
+      }
     }
   }
 
@@ -227,7 +257,7 @@ export class MainApp implements MazeController {
    * Toggle preview window visibility
    */
   public togglePreview(): void {
-    this.previewWindow.toggle();
+    this.setPreviewVisible(!this.isPreviewVisible);
   }
 
   // ========== MazeController Interface Implementation ==========
@@ -270,7 +300,7 @@ export class MainApp implements MazeController {
     // Destroy components
     this.maze.destroy();
     this.guiController.destroy();
-    this.previewWindow.destroy();
+    this.previewWindow?.destroy();
 
     this.stopDebugLoop();
     if (this.debugOverlay && this.debugOverlay.parentNode) {
@@ -292,11 +322,35 @@ export class MainApp implements MazeController {
 
   public setPreviewVisible(visible: boolean): void {
     this.isPreviewVisible = visible;
+    if (this.isPreviewClosed || !this.previewWindow) {
+      if (visible) {
+        this.isPreviewVisible = false;
+        this.guiController.updateSetting('showPreview', false);
+      }
+      return;
+    }
     if (visible) {
       this.previewWindow.show();
     } else {
       this.previewWindow.hide();
     }
+  }
+
+  private handlePreviewHidden(): void {
+    this.isPreviewVisible = false;
+    this.guiController.updateSetting('showPreview', false);
+  }
+
+  private handlePreviewClosed(): void {
+    this.isPreviewVisible = false;
+    this.isPreviewClosed = true;
+    this.previewWindow = null;
+    this.guiController.updateSetting('showPreview', false);
+    this.guiController.setControllerEnabled(
+      'showPreview',
+      false,
+      'Preview closed. Open a new preview window from Settings.'
+    );
   }
 
   private setupDebugOverlay(): void {

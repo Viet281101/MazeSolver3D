@@ -33,6 +33,20 @@ body {
   transition: opacity 0.3s ease;
 }
 
+.scaled-gui .is-disabled {
+  opacity: 0.55;
+}
+
+.scaled-gui .is-disabled label {
+  cursor: not-allowed;
+}
+
+.scaled-gui .is-disabled input,
+.scaled-gui .is-disabled select,
+.scaled-gui .is-disabled button {
+  cursor: not-allowed;
+}
+
 /* Mobile optimization */
 @media (max-width: 800px) {
   .scaled-gui {
