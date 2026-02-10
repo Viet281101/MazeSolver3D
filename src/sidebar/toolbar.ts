@@ -2,6 +2,7 @@ import { showSolvePopup } from './popup/solve';
 import { showSettingsPopup } from './popup/setting';
 import { showTutorialPopup } from './popup/tutorial';
 import { showMazePopup } from './popup/maze';
+import { showGeneratePopup } from './popup/generate';
 import './toolbar.css';
 
 interface ToolButton {
@@ -23,8 +24,12 @@ export class Toolbar {
   private popupOpen: boolean;
   private currentPopup: HTMLElement | null;
   private currentCloseIcon: HTMLImageElement | null;
+  private currentHideIcon: HTMLImageElement | null;
+  private tooltip: HTMLDivElement | null = null;
+  private hoveredButton: ToolButton | null = null;
 
   private mouseMoveHandler!: (e: MouseEvent) => void;
+  private mouseLeaveHandler!: () => void;
   private mouseDownHandler!: (e: MouseEvent | TouchEvent) => void;
   private touchStartHandler!: (e: TouchEvent) => void;
   private documentClickHandler!: (e: MouseEvent | TouchEvent) => void;
@@ -39,6 +44,7 @@ export class Toolbar {
     this.popupOpen = false;
     this.currentPopup = null;
     this.currentCloseIcon = null;
+    this.currentHideIcon = null;
 
     this.preloadImages().then(() => {
       this.imagesLoaded = true;
@@ -69,10 +75,35 @@ export class Toolbar {
     this.canvas.height = this.isMobile ? 50 : window.innerHeight;
   }
 
+  private ensureTooltip(): void {
+    if (this.tooltip) return;
+    const tooltip = document.createElement('div');
+    tooltip.className = 'toolbar-tooltip';
+    tooltip.style.display = 'none';
+    document.body.appendChild(tooltip);
+    this.tooltip = tooltip;
+  }
+
+  private showTooltip(text: string, x: number, y: number): void {
+    if (this.isMobile) return;
+    this.ensureTooltip();
+    if (!this.tooltip) return;
+    this.tooltip.textContent = text;
+    this.tooltip.style.left = `${x + 12}px`;
+    this.tooltip.style.top = `${y + 12}px`;
+    this.tooltip.style.display = 'block';
+  }
+
+  private hideTooltip(): void {
+    if (!this.tooltip) return;
+    this.tooltip.style.display = 'none';
+  }
+
   private createButtons(): ToolButton[] {
     const iconPaths = [
       '/MazeSolver3D/icon/maze.png',
-      '/MazeSolver3D/icon/solving.png',
+      '/MazeSolver3D/icon/generate_maze.png',
+      '/MazeSolver3D/icon/solving_maze.png',
       '/MazeSolver3D/icon/question.png',
       '/MazeSolver3D/icon/setting.png',
     ];
@@ -88,8 +119,17 @@ export class Toolbar {
         height: 0,
       },
       {
-        name: 'Solving Maze',
+        name: 'Generate Maze',
         icon: iconPaths[1],
+        action: () => this.togglePopup('generate'),
+        x: 0,
+        y: 0,
+        width: 0,
+        height: 0,
+      },
+      {
+        name: 'Solving Maze',
+        icon: iconPaths[2],
         action: () => this.togglePopup('solve'),
         x: 0,
         y: 0,
@@ -98,7 +138,7 @@ export class Toolbar {
       },
       {
         name: 'Tutorial',
-        icon: iconPaths[2],
+        icon: iconPaths[3],
         action: () => this.togglePopup('tutorial'),
         x: 0,
         y: 0,
@@ -107,7 +147,7 @@ export class Toolbar {
       },
       {
         name: 'Settings',
-        icon: iconPaths[3],
+        icon: iconPaths[4],
         action: () => this.togglePopup('settings'),
         x: 0,
         y: 0,
@@ -223,15 +263,31 @@ export class Toolbar {
 
     this.mouseMoveHandler = (e: MouseEvent) => {
       let cursor = 'default';
+      let nextHovered: ToolButton | null = null;
       for (const button of this.buttons) {
         if (this.isInside(e.clientX, e.clientY, button)) {
           cursor = 'pointer';
+          nextHovered = button;
           break;
         }
       }
       this.canvas.style.cursor = cursor;
+      if (nextHovered) {
+        if (this.hoveredButton !== nextHovered) {
+          this.hoveredButton = nextHovered;
+        }
+        this.showTooltip(nextHovered.name, e.clientX, e.clientY);
+      } else {
+        this.hoveredButton = null;
+        this.hideTooltip();
+      }
     };
     this.canvas.addEventListener('mousemove', this.mouseMoveHandler, { passive: true });
+    this.mouseLeaveHandler = () => {
+      this.hoveredButton = null;
+      this.hideTooltip();
+    };
+    this.canvas.addEventListener('mouseleave', this.mouseLeaveHandler, { passive: true });
 
     this.mouseDownHandler = (e: MouseEvent | TouchEvent) => this.handleCanvasClick(e);
     this.touchStartHandler = (e: TouchEvent) => this.handleCanvasClick(e);
@@ -247,6 +303,9 @@ export class Toolbar {
   private removeEventListeners(): void {
     if (this.mouseMoveHandler) {
       this.canvas.removeEventListener('mousemove', this.mouseMoveHandler);
+    }
+    if (this.mouseLeaveHandler) {
+      this.canvas.removeEventListener('mouseleave', this.mouseLeaveHandler);
     }
     if (this.mouseDownHandler) {
       this.canvas.removeEventListener('mousedown', this.mouseDownHandler);
@@ -277,15 +336,11 @@ export class Toolbar {
 
     const target = e.target as Node;
     if (this.canvas.contains(target)) return;
+    if (this.currentCloseIcon && this.currentCloseIcon.contains(target)) return;
+    if (this.currentHideIcon && this.currentHideIcon.contains(target)) return;
+    if (this.currentPopup && this.currentPopup.contains(target)) return;
 
-    const popups = ['solvePopup', 'tutorialPopup', 'settingsPopup', 'mazePopup'];
-    for (const popupId of popups) {
-      const popup = document.getElementById(popupId);
-      if (popup && !popup.contains(target)) {
-        this.closeCurrentPopup();
-        break;
-      }
-    }
+    this.hideCurrentPopup();
   }
 
   public resizeToolbar(): void {
@@ -320,19 +375,43 @@ export class Toolbar {
   }
 
   private togglePopup(type: string): void {
-    if (this.currentPopup && this.currentPopup.id === `${type}Popup`) {
-      this.closePopup(type);
-    } else {
-      this.closeCurrentPopup();
-      this.showPopup(type);
+    const popupId = `${type}Popup`;
+    if (
+      this.currentPopup &&
+      this.currentPopup.id === popupId &&
+      this.isPopupVisible(this.currentPopup)
+    ) {
+      this.hideCurrentPopup();
+      return;
     }
+    if (
+      this.currentPopup &&
+      this.currentPopup.id !== popupId &&
+      this.isPopupVisible(this.currentPopup)
+    ) {
+      this.hideCurrentPopup();
+    }
+    this.showPopup(type);
   }
 
   private showPopup(type: string): void {
+    const popupId = `${type}Popup`;
+    const existingPopup = document.getElementById(popupId);
+    if (existingPopup) {
+      existingPopup.style.display = 'block';
+      this.popupOpen = true;
+      this.currentPopup = existingPopup;
+      this.addCloseIcon();
+      this.addHideIcon();
+      return;
+    }
     this.popupOpen = true;
     switch (type) {
       case 'solve':
         showSolvePopup(this);
+        break;
+      case 'generate':
+        showGeneratePopup(this);
         break;
       case 'tutorial':
         showTutorialPopup(this);
@@ -365,6 +444,7 @@ export class Toolbar {
     popupContainer.appendChild(titleElement);
 
     this.addCloseIcon();
+    this.addHideIcon();
     this.currentPopup = popupContainer;
     return popupContainer;
   }
@@ -377,14 +457,34 @@ export class Toolbar {
     const closeIcon = new Image();
     closeIcon.src = '/MazeSolver3D/icon/close.png';
     closeIcon.className = 'toolbar-popup__close';
+    closeIcon.title = 'Close';
     closeIcon.style.setProperty('--toolbar-close-top', this.isMobile ? '56px' : '10px');
     closeIcon.style.setProperty(
       '--toolbar-close-left',
-      this.isMobile ? 'calc(50% + 162px)' : '400px'
+      this.isMobile ? 'calc(50% + 160px)' : '400px'
     );
     closeIcon.addEventListener('click', () => this.closeCurrentPopup());
     document.body.appendChild(closeIcon);
     this.currentCloseIcon = closeIcon;
+  }
+
+  private addHideIcon(): void {
+    if (this.currentHideIcon) {
+      document.body.removeChild(this.currentHideIcon);
+    }
+
+    const hideIcon = new Image();
+    hideIcon.src = '/MazeSolver3D/icon/hide.png';
+    hideIcon.className = 'toolbar-popup__hide';
+    hideIcon.title = 'Hide';
+    hideIcon.style.setProperty('--toolbar-hide-top', this.isMobile ? '56px' : '10px');
+    hideIcon.style.setProperty(
+      '--toolbar-hide-left',
+      this.isMobile ? 'calc(50% + 120px)' : '360px'
+    );
+    hideIcon.addEventListener('click', () => this.hideCurrentPopup());
+    document.body.appendChild(hideIcon);
+    this.currentHideIcon = hideIcon;
   }
 
   public closePopup(type: string): void {
@@ -395,6 +495,10 @@ export class Toolbar {
     if (this.currentCloseIcon && this.currentCloseIcon.parentNode) {
       this.currentCloseIcon.parentNode.removeChild(this.currentCloseIcon);
       this.currentCloseIcon = null;
+    }
+    if (this.currentHideIcon && this.currentHideIcon.parentNode) {
+      this.currentHideIcon.parentNode.removeChild(this.currentHideIcon);
+      this.currentHideIcon = null;
     }
     const inputs = document.querySelectorAll('.popup-input');
     inputs.forEach(input => input.parentElement?.removeChild(input));
@@ -411,13 +515,40 @@ export class Toolbar {
       this.currentCloseIcon.parentNode.removeChild(this.currentCloseIcon);
       this.currentCloseIcon = null;
     }
+    if (this.currentHideIcon && this.currentHideIcon.parentNode) {
+      this.currentHideIcon.parentNode.removeChild(this.currentHideIcon);
+      this.currentHideIcon = null;
+    }
     this.popupOpen = false;
+  }
+
+  private hideCurrentPopup(): void {
+    if (this.currentPopup) {
+      this.currentPopup.style.display = 'none';
+    }
+    if (this.currentCloseIcon && this.currentCloseIcon.parentNode) {
+      this.currentCloseIcon.parentNode.removeChild(this.currentCloseIcon);
+      this.currentCloseIcon = null;
+    }
+    if (this.currentHideIcon && this.currentHideIcon.parentNode) {
+      this.currentHideIcon.parentNode.removeChild(this.currentHideIcon);
+      this.currentHideIcon = null;
+    }
+    this.popupOpen = false;
+  }
+
+  private isPopupVisible(popup: HTMLElement): boolean {
+    return popup.style.display !== 'none';
   }
 
   public destroy(): void {
     this.removeEventListeners();
     this.removeCanvas();
     this.closeCurrentPopup();
+    if (this.tooltip && this.tooltip.parentNode) {
+      this.tooltip.parentNode.removeChild(this.tooltip);
+      this.tooltip = null;
+    }
     this.imageCache.clear();
     this.buttons = [];
   }

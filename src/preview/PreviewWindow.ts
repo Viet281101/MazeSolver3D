@@ -1,5 +1,6 @@
 import './PreviewWindow.css';
 import { PREVIEW_COLORS } from './previewConstants';
+import { computeMarkersFromLayer } from '../maze/markerUtils';
 
 export interface PreviewWindowConfig {
   initialX?: number;
@@ -113,14 +114,14 @@ export class PreviewWindow {
     // Create close button
     this.closeButton = document.createElement('button');
     this.closeButton.className = 'preview-close-btn';
-    this.closeButton.innerHTML = '×';
+    this.closeButton.textContent = 'x';
 
     // Create hide button
     this.hideButton = document.createElement('button');
     this.hideButton.className = 'preview-hide-btn';
     this.hideButton.type = 'button';
     this.hideButton.setAttribute('title', 'Hide preview');
-    this.hideButton.textContent = '–';
+    this.hideButton.textContent = '-';
 
     // Create grid toggle button
     this.gridToggleButton = document.createElement('button');
@@ -254,11 +255,24 @@ export class PreviewWindow {
   /**
    * Update maze data and redraw
    */
-  public updateMaze(mazeData: number[][]): void {
+  public updateMaze(
+    mazeData: number[][],
+    markers?: {
+      start?: { row: number; col: number } | null;
+      end?: { row: number; col: number } | null;
+    }
+  ): void {
     this.mazeData = mazeData;
-    const { start, end } = this.computeStartEndCells(mazeData);
-    this.startCell = start;
-    this.endCell = end;
+    if (markers) {
+      this.startCell = markers.start ?? null;
+      this.endCell = markers.end ?? null;
+    } else {
+      const computed = computeMarkersFromLayer(mazeData);
+      const start = computed?.start ?? null;
+      const end = computed?.end ?? null;
+      this.startCell = start;
+      this.endCell = end;
+    }
     this.layout = this.computeLayout(mazeData);
     this.render();
   }
@@ -319,15 +333,7 @@ export class PreviewWindow {
       this.startCell.col === this.endCell.col;
 
     if (hasSameCell && this.startCell) {
-      this.drawMarker(
-        this.startCell,
-        rows,
-        cellSize,
-        offsetX,
-        offsetY,
-        PREVIEW_COLORS.markerBoth,
-        'S/E'
-      );
+      this.drawMarker(this.startCell, rows, cellSize, offsetX, offsetY, PREVIEW_COLORS.markerBoth);
     } else {
       if (this.startCell) {
         this.drawMarker(
@@ -336,20 +342,11 @@ export class PreviewWindow {
           cellSize,
           offsetX,
           offsetY,
-          PREVIEW_COLORS.markerStart,
-          'S'
+          PREVIEW_COLORS.markerStart
         );
       }
       if (this.endCell) {
-        this.drawMarker(
-          this.endCell,
-          rows,
-          cellSize,
-          offsetX,
-          offsetY,
-          PREVIEW_COLORS.markerEnd,
-          'E'
-        );
+        this.drawMarker(this.endCell, rows, cellSize, offsetX, offsetY, PREVIEW_COLORS.markerEnd);
       }
     }
   }
@@ -377,72 +374,19 @@ export class PreviewWindow {
     return { rows, cols, cellSize, offsetX, offsetY };
   }
 
-  private computeStartEndCells(mazeData: number[][]): {
-    start: { row: number; col: number } | null;
-    end: { row: number; col: number } | null;
-  } {
-    const rows = mazeData.length;
-    if (rows === 0) {
-      return { start: null, end: null };
-    }
-    const cols = mazeData[0].length;
-    const boundaryCells: { row: number; col: number }[] = [];
-    const pathCells: { row: number; col: number }[] = [];
-
-    for (let row = 0; row < rows; row++) {
-      for (let col = 0; col < cols; col++) {
-        if (mazeData[row][col] !== 0) continue;
-        const cell = { row, col };
-        pathCells.push(cell);
-        if (row === 0 || row === rows - 1 || col === 0 || col === cols - 1) {
-          boundaryCells.push(cell);
-        }
-      }
-    }
-
-    let start = boundaryCells[0] ?? null;
-    let end = boundaryCells.length > 1 ? boundaryCells[boundaryCells.length - 1] : null;
-
-    if (!start) {
-      start = pathCells[0] ?? null;
-    }
-
-    if (!end) {
-      end = pathCells.length > 1 ? pathCells[pathCells.length - 1] : start;
-    }
-
-    return { start, end };
-  }
-
   private drawMarker(
     cell: { row: number; col: number },
     rows: number,
     cellSize: number,
     offsetX: number,
     offsetY: number,
-    color: string,
-    label: string
+    color: string
   ): void {
     const x = offsetX + cell.col * cellSize;
     const y = offsetY + (rows - 1 - cell.row) * cellSize;
-    const centerX = x + cellSize / 2;
-    const centerY = y + cellSize / 2;
-    const radius = Math.max(4, cellSize * 0.35);
 
-    this.ctx.beginPath();
     this.ctx.fillStyle = color;
-    this.ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-    this.ctx.fill();
-
-    this.ctx.lineWidth = Math.max(1, cellSize * 0.08);
-    this.ctx.strokeStyle = PREVIEW_COLORS.markerStroke;
-    this.ctx.stroke();
-
-    this.ctx.fillStyle = PREVIEW_COLORS.markerText;
-    this.ctx.font = `bold ${Math.max(8, cellSize * 0.45)}px Arial`;
-    this.ctx.textAlign = 'center';
-    this.ctx.textBaseline = 'middle';
-    this.ctx.fillText(label, centerX, centerY + 0.5);
+    this.ctx.fillRect(x, y, cellSize, cellSize);
   }
 
   /**

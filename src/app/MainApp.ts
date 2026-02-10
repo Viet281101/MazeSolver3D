@@ -4,6 +4,7 @@ import { Toolbar } from '../sidebar/toolbar';
 import { GUIController } from '../gui';
 import { PreviewWindow } from '../preview/PreviewWindow';
 import type { MazeController } from '../maze/MazeController';
+import { computeMarkersFromLayer } from '../maze/markerUtils';
 
 /**
  * MainApp - Application entry point & lifecycle manager
@@ -22,6 +23,10 @@ export class MainApp implements MazeController {
   private readonly debugUpdateIntervalMs: number = 250;
   private renderCount: number = 0;
   private renderListener: () => void;
+  private previewMarkers: {
+    start: { row: number; col: number } | null;
+    end: { row: number; col: number } | null;
+  } | null = null;
   private isDebugOverlayVisible: boolean = true;
   private isPreviewVisible: boolean = true;
   private isPreviewClosed: boolean = false;
@@ -39,6 +44,8 @@ export class MainApp implements MazeController {
 
     // Create initial maze
     this.maze = this.createInitialMaze();
+    const initialData = this.maze.getMazeData();
+    this.previewMarkers = computeMarkersFromLayer(initialData?.[0]);
 
     // Initialize GUI
     this.guiController = new GUIController(this, {
@@ -142,23 +149,44 @@ export class MainApp implements MazeController {
   /**
    * Update maze with new data
    */
-  public updateMaze(newMaze: number[][][], multiLayer: boolean = false): void {
-    // Destroy old maze completely
-    this.maze.removeRenderListener(this.renderListener);
-    this.maze.destroy();
+  public updateMaze(
+    newMaze: number[][][],
+    multiLayer: boolean = false,
+    markers?: {
+      start?: { row: number; col: number } | null;
+      end?: { row: number; col: number } | null;
+    }
+  ): void {
+    const canReuseSingle = !multiLayer && this.maze instanceof SingleLayerMaze;
+    const canReuseMulti = multiLayer && this.maze instanceof MultiLayerMaze;
 
-    // Create new maze
-    if (multiLayer) {
-      this.maze = new MultiLayerMaze(this.canvas, newMaze);
+    if (canReuseSingle || canReuseMulti) {
+      this.maze.updateMazeData(newMaze);
     } else {
-      this.maze = new SingleLayerMaze(this.canvas, newMaze);
+      // Destroy old maze completely
+      this.maze.removeRenderListener(this.renderListener);
+      this.maze.destroy();
+
+      // Create new maze
+      if (multiLayer) {
+        this.maze = new MultiLayerMaze(this.canvas, newMaze);
+      } else {
+        this.maze = new SingleLayerMaze(this.canvas, newMaze);
+      }
+
+      // Apply GUI settings to new maze
+      this.applyGUISettings();
+
+      // Re-attach render listener for debug overlay
+      this.maze.addRenderListener(this.renderListener);
     }
 
-    // Apply GUI settings to new maze
-    this.applyGUISettings();
-
-    // Re-attach render listener for debug overlay
-    this.maze.addRenderListener(this.renderListener);
+    if (markers) {
+      this.previewMarkers = { start: markers.start ?? null, end: markers.end ?? null };
+    } else {
+      const currentData = this.maze.getMazeData();
+      this.previewMarkers = computeMarkersFromLayer(currentData?.[0]);
+    }
 
     // Update preview
     this.updatePreview();
@@ -171,7 +199,11 @@ export class MainApp implements MazeController {
     // Get first layer of maze for 2D preview
     const mazeData = this.maze['maze'];
     if (mazeData && mazeData.length > 0) {
-      this.previewWindow?.updateMaze(mazeData[0]);
+      if (this.previewMarkers) {
+        this.previewWindow?.updateMaze(mazeData[0], this.previewMarkers);
+      } else {
+        this.previewWindow?.updateMaze(mazeData[0]);
+      }
     }
   }
 
@@ -238,6 +270,16 @@ export class MainApp implements MazeController {
 
   public getRenderer(): any {
     return this.maze.getRenderer();
+  }
+
+  public getMazeData(): number[][][] {
+    return this.maze.getMazeData();
+  }
+
+  public getMazeMarkers():
+    | { start: { row: number; col: number } | null; end: { row: number; col: number } | null }
+    | null {
+    return this.previewMarkers ? { ...this.previewMarkers } : null;
   }
 
   public updateWallColor(color: string): void {

@@ -9,6 +9,7 @@
   font-family: Arial, sans-serif;
   transform: translateY(0);
   opacity: 1;
+  user-select: none;
   transition:
     opacity var(--preview-hide-duration, 350ms) ease,
     transform var(--preview-hide-duration, 350ms) ease;
