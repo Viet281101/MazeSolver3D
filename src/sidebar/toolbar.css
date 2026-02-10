@@ -131,3 +131,17 @@
   cursor: crosshair;
   touch-action: none;
 }
+
+.toolbar-tooltip {
+  position: fixed;
+  z-index: 1002;
+  padding: 6px 8px;
+  background: rgba(0, 0, 0, 0.85);
+  color: #f2f2f2;
+  font-size: 14px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  pointer-events: none;
+  white-space: nowrap;
+  transform: translateZ(0);
+}

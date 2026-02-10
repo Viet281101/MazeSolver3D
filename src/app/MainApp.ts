@@ -22,9 +22,10 @@ export class MainApp implements MazeController {
   private readonly debugUpdateIntervalMs: number = 250;
   private renderCount: number = 0;
   private renderListener: () => void;
-  private previewMarkers:
-    | { start: { row: number; col: number } | null; end: { row: number; col: number } | null }
-    | null = null;
+  private previewMarkers: {
+    start: { row: number; col: number } | null;
+    end: { row: number; col: number } | null;
+  } | null = null;
   private isDebugOverlayVisible: boolean = true;
   private isPreviewVisible: boolean = true;
   private isPreviewClosed: boolean = false;
@@ -148,7 +149,10 @@ export class MainApp implements MazeController {
   public updateMaze(
     newMaze: number[][][],
     multiLayer: boolean = false,
-    markers?: { start?: { row: number; col: number } | null; end?: { row: number; col: number } | null }
+    markers?: {
+      start?: { row: number; col: number } | null;
+      end?: { row: number; col: number } | null;
+    }
   ): void {
     const canReuseSingle = !multiLayer && this.maze instanceof SingleLayerMaze;
     const canReuseMulti = multiLayer && this.maze instanceof MultiLayerMaze;
@@ -174,7 +178,9 @@ export class MainApp implements MazeController {
       this.maze.addRenderListener(this.renderListener);
     }
 
-    this.previewMarkers = markers ? { start: markers.start ?? null, end: markers.end ?? null } : null;
+    this.previewMarkers = markers
+      ? { start: markers.start ?? null, end: markers.end ?? null }
+      : null;
 
     // Update preview
     this.updatePreview();

@@ -2,6 +2,7 @@ import { showSolvePopup } from './popup/solve';
 import { showSettingsPopup } from './popup/setting';
 import { showTutorialPopup } from './popup/tutorial';
 import { showMazePopup } from './popup/maze';
+import { showGeneratePopup } from './popup/generate';
 import './toolbar.css';
 
 interface ToolButton {
@@ -24,8 +25,11 @@ export class Toolbar {
   private currentPopup: HTMLElement | null;
   private currentCloseIcon: HTMLImageElement | null;
   private currentHideIcon: HTMLImageElement | null;
+  private tooltip: HTMLDivElement | null = null;
+  private hoveredButton: ToolButton | null = null;
 
   private mouseMoveHandler!: (e: MouseEvent) => void;
+  private mouseLeaveHandler!: () => void;
   private mouseDownHandler!: (e: MouseEvent | TouchEvent) => void;
   private touchStartHandler!: (e: TouchEvent) => void;
   private documentClickHandler!: (e: MouseEvent | TouchEvent) => void;
@@ -71,10 +75,35 @@ export class Toolbar {
     this.canvas.height = this.isMobile ? 50 : window.innerHeight;
   }
 
+  private ensureTooltip(): void {
+    if (this.tooltip) return;
+    const tooltip = document.createElement('div');
+    tooltip.className = 'toolbar-tooltip';
+    tooltip.style.display = 'none';
+    document.body.appendChild(tooltip);
+    this.tooltip = tooltip;
+  }
+
+  private showTooltip(text: string, x: number, y: number): void {
+    if (this.isMobile) return;
+    this.ensureTooltip();
+    if (!this.tooltip) return;
+    this.tooltip.textContent = text;
+    this.tooltip.style.left = `${x + 12}px`;
+    this.tooltip.style.top = `${y + 12}px`;
+    this.tooltip.style.display = 'block';
+  }
+
+  private hideTooltip(): void {
+    if (!this.tooltip) return;
+    this.tooltip.style.display = 'none';
+  }
+
   private createButtons(): ToolButton[] {
     const iconPaths = [
       '/MazeSolver3D/icon/maze.png',
-      '/MazeSolver3D/icon/solving.png',
+      '/MazeSolver3D/icon/generate_maze.png',
+      '/MazeSolver3D/icon/solving_maze.png',
       '/MazeSolver3D/icon/question.png',
       '/MazeSolver3D/icon/setting.png',
     ];
@@ -90,8 +119,17 @@ export class Toolbar {
         height: 0,
       },
       {
-        name: 'Solving Maze',
+        name: 'Generate Maze',
         icon: iconPaths[1],
+        action: () => this.togglePopup('generate'),
+        x: 0,
+        y: 0,
+        width: 0,
+        height: 0,
+      },
+      {
+        name: 'Solving Maze',
+        icon: iconPaths[2],
         action: () => this.togglePopup('solve'),
         x: 0,
         y: 0,
@@ -100,7 +138,7 @@ export class Toolbar {
       },
       {
         name: 'Tutorial',
-        icon: iconPaths[2],
+        icon: iconPaths[3],
         action: () => this.togglePopup('tutorial'),
         x: 0,
         y: 0,
@@ -109,7 +147,7 @@ export class Toolbar {
       },
       {
         name: 'Settings',
-        icon: iconPaths[3],
+        icon: iconPaths[4],
         action: () => this.togglePopup('settings'),
         x: 0,
         y: 0,
@@ -225,15 +263,31 @@ export class Toolbar {
 
     this.mouseMoveHandler = (e: MouseEvent) => {
       let cursor = 'default';
+      let nextHovered: ToolButton | null = null;
       for (const button of this.buttons) {
         if (this.isInside(e.clientX, e.clientY, button)) {
           cursor = 'pointer';
+          nextHovered = button;
           break;
         }
       }
       this.canvas.style.cursor = cursor;
+      if (nextHovered) {
+        if (this.hoveredButton !== nextHovered) {
+          this.hoveredButton = nextHovered;
+        }
+        this.showTooltip(nextHovered.name, e.clientX, e.clientY);
+      } else {
+        this.hoveredButton = null;
+        this.hideTooltip();
+      }
     };
     this.canvas.addEventListener('mousemove', this.mouseMoveHandler, { passive: true });
+    this.mouseLeaveHandler = () => {
+      this.hoveredButton = null;
+      this.hideTooltip();
+    };
+    this.canvas.addEventListener('mouseleave', this.mouseLeaveHandler, { passive: true });
 
     this.mouseDownHandler = (e: MouseEvent | TouchEvent) => this.handleCanvasClick(e);
     this.touchStartHandler = (e: TouchEvent) => this.handleCanvasClick(e);
@@ -249,6 +303,9 @@ export class Toolbar {
   private removeEventListeners(): void {
     if (this.mouseMoveHandler) {
       this.canvas.removeEventListener('mousemove', this.mouseMoveHandler);
+    }
+    if (this.mouseLeaveHandler) {
+      this.canvas.removeEventListener('mouseleave', this.mouseLeaveHandler);
     }
     if (this.mouseDownHandler) {
       this.canvas.removeEventListener('mousedown', this.mouseDownHandler);
@@ -352,6 +409,9 @@ export class Toolbar {
     switch (type) {
       case 'solve':
         showSolvePopup(this);
+        break;
+      case 'generate':
+        showGeneratePopup(this);
         break;
       case 'tutorial':
         showTutorialPopup(this);
@@ -485,6 +545,10 @@ export class Toolbar {
     this.removeEventListeners();
     this.removeCanvas();
     this.closeCurrentPopup();
+    if (this.tooltip && this.tooltip.parentNode) {
+      this.tooltip.parentNode.removeChild(this.tooltip);
+      this.tooltip = null;
+    }
     this.imageCache.clear();
     this.buttons = [];
   }

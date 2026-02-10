@@ -78,6 +78,7 @@ export abstract class Maze {
       antialias: true,
       powerPreference: 'high-performance',
     });
+    this.renderer.domElement.style.touchAction = 'none';
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
 
     // Initialize resource managers
@@ -133,6 +134,7 @@ export abstract class Maze {
     this.camera.position.set(centerX, 10, distance);
     this.controls.target.set(centerX, 0, centerZ);
     this.controls.update();
+    this.controls.saveState();
   }
 
   /**
