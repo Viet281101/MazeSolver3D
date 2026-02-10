@@ -17,6 +17,7 @@
   overflow-y: auto;
   overflow-x: hidden;
   z-index: 1000;
+  user-select: none;
 }
 
 .toolbar-popup__title {
@@ -73,6 +74,13 @@
   align-items: center;
 }
 
+.maze-popup__section-title {
+  font-size: 20px;
+  color: #ffffff;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
 .maze-popup__section--apply {
   justify-content: center;
   position: relative;
@@ -83,7 +91,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  color: #eaeaea;
+  color: #ffffff;
   font-size: 20px;
 }
 
@@ -96,6 +104,7 @@
   padding: 4px 6px;
   border-radius: 4px;
   font-size: 16px;
+  user-select: text;
 }
 
 .maze-popup__btn,

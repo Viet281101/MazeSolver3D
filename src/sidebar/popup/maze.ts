@@ -39,6 +39,7 @@ class MazePopup {
   private createBtn: HTMLButtonElement;
   private clearBtn: HTMLButtonElement;
   private applyBtn: HTMLButtonElement;
+  private loadBtn: HTMLButtonElement;
 
   private onMouseDown: (e: MouseEvent) => void;
   private onMouseMove: (e: MouseEvent) => void;
@@ -79,6 +80,7 @@ class MazePopup {
     this.createBtn = ui.createBtn;
     this.clearBtn = ui.clearBtn;
     this.applyBtn = ui.applyBtn;
+    this.loadBtn = ui.loadBtn;
 
     this.state = {
       rows: this.rowsInput.valueAsNumber,
@@ -115,16 +117,23 @@ class MazePopup {
     const controls = document.createElement('div');
     controls.className = 'maze-popup__controls';
 
+    const sectionTitle = document.createElement('div');
+    sectionTitle.className = 'maze-popup__section-title';
+    sectionTitle.textContent = 'Single Layer Maze custom';
+    controls.appendChild(sectionTitle);
+
     const sizeSection = document.createElement('div');
     sizeSection.className = 'maze-popup__section';
 
     const rowsInput = createNumberInput('Rows', 5, 80, 12);
     const colsInput = createNumberInput('Cols', 5, 80, 12);
     const createBtn = createButton('Create', 'maze-popup__btn');
+    const loadBtn = createButton('Load Current Maze', 'maze-popup__btn');
 
     sizeSection.appendChild(rowsInput.wrapper);
     sizeSection.appendChild(colsInput.wrapper);
     sizeSection.appendChild(createBtn);
+    sizeSection.appendChild(loadBtn);
 
     const toolSection = document.createElement('div');
     toolSection.className = 'maze-popup__section';
@@ -159,6 +168,7 @@ class MazePopup {
       rowsInput: rowsInput.input,
       colsInput: colsInput.input,
       createBtn,
+      loadBtn,
       clearBtn,
       applyBtn,
       toolButtons: {
@@ -172,6 +182,7 @@ class MazePopup {
 
   private bindEvents() {
     this.createBtn.addEventListener('click', () => this.handleCreate());
+    this.loadBtn.addEventListener('click', () => this.handleLoadCurrent());
     this.clearBtn.addEventListener('click', () => this.handleClear());
     this.applyBtn.addEventListener('click', () => this.handleApply());
 
@@ -351,6 +362,85 @@ class MazePopup {
     this.state.grid = this.initGrid(this.state.rows, this.state.cols);
     this.state.start = null;
     this.state.end = null;
+    this.draw();
+  }
+
+  private handleLoadCurrent() {
+    const mazeApp = (window as any).mazeApp;
+    if (!mazeApp || typeof mazeApp.getMazeData !== 'function') {
+      console.warn('mazeApp.getMazeData not available');
+      return;
+    }
+    const data = mazeApp.getMazeData();
+    const markers =
+      mazeApp && typeof mazeApp.getMazeMarkers === 'function' ? mazeApp.getMazeMarkers() : null;
+    if (!Array.isArray(data) || data.length === 0 || !Array.isArray(data[0])) {
+      console.warn('No maze data available to load');
+      return;
+    }
+    if (data.length !== 1) {
+      console.warn('Current maze is not single-layer. Load is blocked.');
+      window.alert('Only single-layer mazes can be loaded into the editor.');
+      return;
+    }
+    const layer = data[0];
+    if (!layer || layer.length === 0 || !Array.isArray(layer[0])) {
+      console.warn('Maze layer is empty');
+      return;
+    }
+
+    const rows = layer.length;
+    const cols = layer[0].length;
+    const nextRows = this.clamp(rows, 5, 80);
+    const nextCols = this.clamp(cols, 5, 80);
+    if (rows !== nextRows || cols !== nextCols) {
+      console.warn('Maze size exceeds popup limits, data will be clamped');
+    }
+
+    const reversed = layer.slice().reverse();
+    const grid: number[][] = [];
+    for (let r = 0; r < nextRows; r += 1) {
+      const row: number[] = [];
+      const srcRow = reversed[r] ?? [];
+      for (let c = 0; c < nextCols; c += 1) {
+        const cell = srcRow[c] ?? 1;
+        row.push(cell === 0 ? 0 : 1);
+      }
+      grid.push(row);
+    }
+
+    this.state.rows = nextRows;
+    this.state.cols = nextCols;
+    this.state.grid = grid;
+    this.state.start = null;
+    this.state.end = null;
+    if (markers) {
+      if (markers.start) {
+        const popupStartRow = nextRows - 1 - markers.start.row;
+        if (
+          popupStartRow >= 0 &&
+          popupStartRow < nextRows &&
+          markers.start.col >= 0 &&
+          markers.start.col < nextCols
+        ) {
+          this.state.start = { row: popupStartRow, col: markers.start.col };
+        }
+      }
+      if (markers.end) {
+        const popupEndRow = nextRows - 1 - markers.end.row;
+        if (
+          popupEndRow >= 0 &&
+          popupEndRow < nextRows &&
+          markers.end.col >= 0 &&
+          markers.end.col < nextCols
+        ) {
+          this.state.end = { row: popupEndRow, col: markers.end.col };
+        }
+      }
+    }
+    this.rowsInput.valueAsNumber = nextRows;
+    this.colsInput.valueAsNumber = nextCols;
+    this.resetView();
     this.draw();
   }
 
