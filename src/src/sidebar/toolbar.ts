@@ -461,7 +461,7 @@ export class Toolbar {
     closeIcon.style.setProperty('--toolbar-close-top', this.isMobile ? '56px' : '10px');
     closeIcon.style.setProperty(
       '--toolbar-close-left',
-      this.isMobile ? 'calc(50% + 162px)' : '400px'
+      this.isMobile ? 'calc(50% + 160px)' : '400px'
     );
     closeIcon.addEventListener('click', () => this.closeCurrentPopup());
     document.body.appendChild(closeIcon);
@@ -480,7 +480,7 @@ export class Toolbar {
     hideIcon.style.setProperty('--toolbar-hide-top', this.isMobile ? '56px' : '10px');
     hideIcon.style.setProperty(
       '--toolbar-hide-left',
-      this.isMobile ? 'calc(50% + 140px)' : '360px'
+      this.isMobile ? 'calc(50% + 120px)' : '360px'
     );
     hideIcon.addEventListener('click', () => this.hideCurrentPopup());
     document.body.appendChild(hideIcon);

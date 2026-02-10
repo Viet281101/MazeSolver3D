@@ -4,6 +4,7 @@ import { Toolbar } from '../sidebar/toolbar';
 import { GUIController } from '../gui';
 import { PreviewWindow } from '../preview/PreviewWindow';
 import type { MazeController } from '../maze/MazeController';
+import { computeMarkersFromLayer } from '../maze/markerUtils';
 
 /**
  * MainApp - Application entry point & lifecycle manager
@@ -43,6 +44,8 @@ export class MainApp implements MazeController {
 
     // Create initial maze
     this.maze = this.createInitialMaze();
+    const initialData = this.maze.getMazeData();
+    this.previewMarkers = computeMarkersFromLayer(initialData?.[0]);
 
     // Initialize GUI
     this.guiController = new GUIController(this, {
@@ -178,9 +181,12 @@ export class MainApp implements MazeController {
       this.maze.addRenderListener(this.renderListener);
     }
 
-    this.previewMarkers = markers
-      ? { start: markers.start ?? null, end: markers.end ?? null }
-      : null;
+    if (markers) {
+      this.previewMarkers = { start: markers.start ?? null, end: markers.end ?? null };
+    } else {
+      const currentData = this.maze.getMazeData();
+      this.previewMarkers = computeMarkersFromLayer(currentData?.[0]);
+    }
 
     // Update preview
     this.updatePreview();
@@ -264,6 +270,17 @@ export class MainApp implements MazeController {
 
   public getRenderer(): any {
     return this.maze.getRenderer();
+  }
+
+  public getMazeData(): number[][][] {
+    return this.maze.getMazeData();
+  }
+
+  public getMazeMarkers(): {
+    start: { row: number; col: number } | null;
+    end: { row: number; col: number } | null;
+  } | null {
+    return this.previewMarkers ? { ...this.previewMarkers } : null;
   }
 
   public updateWallColor(color: string): void {

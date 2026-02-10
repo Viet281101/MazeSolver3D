@@ -237,6 +237,10 @@ export abstract class Maze {
     return this.renderer;
   }
 
+  public getMazeData(): number[][][] {
+    return this.maze.map(layer => layer.map(row => row.slice()));
+  }
+
   public updateWallColor(color: string): void {
     this.wallColor.set(color);
     this.resourceManager.updateMaterialColor('wall', this.wallColor);

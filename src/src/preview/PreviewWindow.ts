@@ -1,5 +1,6 @@
 import './PreviewWindow.css';
 import { PREVIEW_COLORS } from './previewConstants';
+import { computeMarkersFromLayer } from '../maze/markerUtils';
 
 export interface PreviewWindowConfig {
   initialX?: number;
@@ -266,7 +267,9 @@ export class PreviewWindow {
       this.startCell = markers.start ?? null;
       this.endCell = markers.end ?? null;
     } else {
-      const { start, end } = this.computeStartEndCells(mazeData);
+      const computed = computeMarkersFromLayer(mazeData);
+      const start = computed?.start ?? null;
+      const end = computed?.end ?? null;
       this.startCell = start;
       this.endCell = end;
     }
@@ -369,43 +372,6 @@ export class PreviewWindow {
     const offsetY = (this.canvasHeight - cellSize * rows) / 2;
 
     return { rows, cols, cellSize, offsetX, offsetY };
-  }
-
-  private computeStartEndCells(mazeData: number[][]): {
-    start: { row: number; col: number } | null;
-    end: { row: number; col: number } | null;
-  } {
-    const rows = mazeData.length;
-    if (rows === 0) {
-      return { start: null, end: null };
-    }
-    const cols = mazeData[0].length;
-    const boundaryCells: { row: number; col: number }[] = [];
-    const pathCells: { row: number; col: number }[] = [];
-
-    for (let row = 0; row < rows; row++) {
-      for (let col = 0; col < cols; col++) {
-        if (mazeData[row][col] !== 0) continue;
-        const cell = { row, col };
-        pathCells.push(cell);
-        if (row === 0 || row === rows - 1 || col === 0 || col === cols - 1) {
-          boundaryCells.push(cell);
-        }
-      }
-    }
-
-    let start = boundaryCells[0] ?? null;
-    let end = boundaryCells.length > 1 ? boundaryCells[boundaryCells.length - 1] : null;
-
-    if (!start) {
-      start = pathCells[0] ?? null;
-    }
-
-    if (!end) {
-      end = pathCells.length > 1 ? pathCells[pathCells.length - 1] : start;
-    }
-
-    return { start, end };
   }
 
   private drawMarker(
