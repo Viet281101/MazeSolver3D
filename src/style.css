@@ -1,17 +1,75 @@
 @charset "UTF-8";
+
 @font-face {
   font-family: 'Pixellari';
   src: url('/Pixellari.ttf') format('truetype');
+  font-display: swap;
 }
+
 * {
   box-sizing: border-box;
-  background-color: black;
   font-family: 'Pixellari', sans-serif;
 }
+
 body {
   margin: 0;
+  padding: 0;
   display: flex;
   justify-content: center;
   align-items: center;
   height: 100vh;
+  overflow: hidden;
+  background-color: #999999;
+}
+
+#mazeCanvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* dat.GUI responsive styles */
+.scaled-gui {
+  transition: opacity 0.3s ease;
+}
+
+.scaled-gui .is-disabled {
+  opacity: 0.55;
+}
+
+.scaled-gui .is-disabled label {
+  cursor: not-allowed;
+}
+
+.scaled-gui .is-disabled input,
+.scaled-gui .is-disabled select,
+.scaled-gui .is-disabled button {
+  cursor: not-allowed;
+}
+
+/* Mobile optimization */
+@media (max-width: 800px) {
+  .scaled-gui {
+    display: none !important;
+  }
+}
+
+/* Prevent text selection during interaction */
+canvas {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Loading state (optional) */
+.loading {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 24px;
+  color: white;
+  z-index: 9999;
 }
